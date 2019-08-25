@@ -81,6 +81,8 @@ private:
     map<int,QRadioButton*> active,pos,vel,dis;
     map<int,int> Kp,Ki,Kd;
     map<int,int> control_mode;
+    map<int, int> control_mode_temp;
+    bool saved_temp_control_mode = false;
     int samples_per_plot = 300;
     QColor color_pallette[16] = {Qt::blue, Qt::red, Qt::green, Qt::cyan, Qt::magenta, Qt::darkGray, Qt::darkRed, Qt::darkGreen,
                                  Qt::darkBlue, Qt::darkCyan, Qt::darkMagenta, Qt::darkYellow, Qt::black, Qt::gray, Qt::green, Qt::cyan};
