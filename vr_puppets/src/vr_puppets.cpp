@@ -24,9 +24,9 @@ void VRPuppets::initPlugin(qt_gui_cpp::PluginContext &context) {
         ros::init(argc, argv, "motor_status_rqt_plugin");
     }
 
-    motor_command = nh->advertise<roboy_middleware_msgs::MotorCommand>("/stepper_motor_shield/MotorCommand",1);
+    motor_command = nh->advertise<roboy_middleware_msgs::MotorCommand>("/stepper_motor_shield/MotorCommand", 1);
     zero_srv = nh->serviceClient<std_srvs::Empty>("/stepper_motor_shield/zero");
-    e_stop_server = nh->advertiseService("/m3/emergency_stop",&VRPuppets::EmergencyCallback,this);
+    e_stop_server = nh->advertiseService("/m3/emergency_stop", &VRPuppets::EmergencyCallback, this);
 
     QObject::connect(this, SIGNAL(new_data()), this, SLOT(plotData()));
     QObject::connect(this, SIGNAL(new_motor()), this, SLOT(newMotor()));
@@ -50,7 +50,7 @@ void VRPuppets::initPlugin(qt_gui_cpp::PluginContext &context) {
 
     start_time = ros::Time::now();
 
-    QScrollArea* scrollArea = widget_->findChild<QScrollArea *>("motor_command");
+    QScrollArea *scrollArea = widget_->findChild<QScrollArea *>("motor_command");
     scrollArea->setBackgroundRole(QPalette::Window);
     scrollArea->setFrameShadow(QFrame::Plain);
     scrollArea->setFrameShape(QFrame::NoFrame);
@@ -72,13 +72,14 @@ void VRPuppets::initPlugin(qt_gui_cpp::PluginContext &context) {
 
     for (uint motor = 0; motor < 20; motor++) {
         ui.position_plot->addGraph();
-        ui.position_plot->graph(motor)->setPen(QPen(color_pallette[motor%16])); // %16 because we only have 16 colors :(
+        ui.position_plot->graph(motor)->setPen(
+                QPen(color_pallette[motor % 16])); // %16 because we only have 16 colors :(
         ui.velocity_plot->addGraph();
-        ui.velocity_plot->graph(motor)->setPen(QPen(color_pallette[motor%16]));
+        ui.velocity_plot->graph(motor)->setPen(QPen(color_pallette[motor % 16]));
         ui.displacement_plot->addGraph();
-        ui.displacement_plot->graph(motor)->setPen(QPen(color_pallette[motor%16]));
+        ui.displacement_plot->graph(motor)->setPen(QPen(color_pallette[motor % 16]));
         ui.pwm_plot->addGraph();
-        ui.pwm_plot->graph(motor)->setPen(QPen(color_pallette[motor%16]));
+        ui.pwm_plot->graph(motor)->setPen(QPen(color_pallette[motor % 16]));
 
     }
     ui.position_plot->xAxis->setLabel("time[s]");
@@ -107,12 +108,12 @@ void VRPuppets::shutdownPlugin() {
 }
 
 void VRPuppets::saveSettings(qt_gui_cpp::Settings &plugin_settings,
-                                    qt_gui_cpp::Settings &instance_settings) const {
+                             qt_gui_cpp::Settings &instance_settings) const {
     // instance_settings.setValue(k, v)
 }
 
 void VRPuppets::restoreSettings(const qt_gui_cpp::Settings &plugin_settings,
-                                       const qt_gui_cpp::Settings &instance_settings) {
+                                const qt_gui_cpp::Settings &instance_settings) {
     // v = instance_settings.value(k)
 }
 
@@ -123,16 +124,16 @@ void VRPuppets::receiveStatusUDP() {
         int bytes_received = udp->receiveUDPFromClient();
         if (bytes_received == 20) {
             t1 = ros::Time::now();
-            ros::Duration d = (t1-t0);
+            ros::Duration d = (t1 - t0);
             t0 = t1;
             float hz = d.toSec();
             int approx_hz = hz;
-            ROS_INFO_THROTTLE(60,"receiving motor status at %f Hz", hz);
+            ROS_INFO_THROTTLE(60, "receiving motor status at %f Hz", hz);
             ros::Duration delta = (ros::Time::now() - start_time);
             lock_guard<mutex> lock(mux);
             int motor = udp->buf[0];
             auto it = ip_address.find(motor);
-            if (it == ip_address.end()) {;
+            if (it == ip_address.end()) { ;
                 char IP[INET_ADDRSTRLEN];
                 inet_ntop(AF_INET, &udp->client_addr.sin_addr, IP, INET_ADDRSTRLEN);
                 ROS_INFO("new motor %d %s", motor, IP);
@@ -143,7 +144,7 @@ void VRPuppets::receiveStatusUDP() {
             }
             time.push_back(delta.toSec());
             int32_t pos = (int32_t) ((uint8_t) udp->buf[7] << 24 | (uint8_t) udp->buf[6] << 16 |
-                                        (uint8_t) udp->buf[5] << 8 | (uint8_t) udp->buf[4]);
+                                     (uint8_t) udp->buf[5] << 8 | (uint8_t) udp->buf[4]);
             int32_t vel = (int32_t) ((uint8_t) udp->buf[11] << 24 | (uint8_t) udp->buf[10] << 16 |
                                      (uint8_t) udp->buf[9] << 8 | (uint8_t) udp->buf[8]);
             int32_t dis = (int32_t) ((uint8_t) udp->buf[15] << 24 | (uint8_t) udp->buf[14] << 16 |
@@ -156,9 +157,9 @@ void VRPuppets::receiveStatusUDP() {
             motor_displacement[motor].push_back(dis);
             motor_pwm[motor].push_back(pwm);
             int count = 0;
-            for(auto m:ip_address){
-                count +=1;
-                if(m.first==motor)
+            for (auto m:ip_address) {
+                count += 1;
+                if (m.first == motor)
                     continue;
                 motor_position[m.first].push_back(motor_position[m.first].back());
                 motor_velocity[m.first].push_back(motor_velocity[m.first].back());
@@ -167,7 +168,7 @@ void VRPuppets::receiveStatusUDP() {
             }
 //            ROS_INFO_THROTTLE(1,"receiving status from motor %d, pos=%d, vel=%d, dis=%d, pwm=%d",motor,pos,vel,dis,pwm);
             if (motor_position[motor].size() > samples_per_plot) {
-                for(auto m:ip_address) {
+                for (auto m:ip_address) {
                     motor_position[m.first].pop_front();
                     motor_velocity[m.first].pop_front();
                     motor_displacement[m.first].pop_front();
@@ -177,10 +178,10 @@ void VRPuppets::receiveStatusUDP() {
             if (time.size() > samples_per_plot)
                 time.pop_front();
 
-            if ((counter++) % (approx_hz+1) == 0) {
+            if ((counter++) % (approx_hz + 1) == 0) {
                 Q_EMIT new_data();
             }
-            if (counter % ((approx_hz+5)*10) == 0 && initialized) {
+            if (counter % ((approx_hz + 5) * 10) == 0 && initialized) {
                 rescale();
             }
         }
@@ -188,8 +189,8 @@ void VRPuppets::receiveStatusUDP() {
     ROS_INFO("stop receiving udp");
 }
 
-void VRPuppets::updateMotorCommands(){
-    for(auto w:widgets) {
+void VRPuppets::updateMotorCommands() {
+    for (auto w:widgets) {
         motor_command_scrollarea->layout()->removeWidget(w);
         delete w;
     }
@@ -202,27 +203,27 @@ void VRPuppets::updateMotorCommands(){
         widget->setLayout(new QHBoxLayout(widget));
 
         QCheckBox *c = new QCheckBox(widget);
-        c->setFixedSize(20,30);
+        c->setFixedSize(20, 30);
         c->setCheckable(true);
         c->setChecked(true);
         check[m.first] = c;
         widget->layout()->addWidget(c);
 
         QLabel *label2 = new QLabel(widget);
-        label2->setFixedSize(30,30);
+        label2->setFixedSize(30, 30);
         char str[22];
         sprintf(str, "ID %d", m.first);
         label2->setText(str);
         widget->layout()->addWidget(label2);
 
         QLabel *label = new QLabel(widget);
-        label->setFixedSize(100,30);
+        label->setFixedSize(100, 30);
         label->setText(m.second.c_str());
         widget->layout()->addWidget(label);
 
         QRadioButton *p = new QRadioButton(widget);
         p->setText("pos");
-        p->setFixedSize(50,30);
+        p->setFixedSize(50, 30);
         p->setCheckable(true);
         p->setObjectName("pos");
         pos[m.first] = p;
@@ -232,7 +233,7 @@ void VRPuppets::updateMotorCommands(){
 
         QRadioButton *v = new QRadioButton(widget);
         v->setText("vel");
-        v->setFixedSize(50,30);
+        v->setFixedSize(50, 30);
         v->setCheckable(true);
         v->setObjectName("vel");
         widget->layout()->addWidget(v);
@@ -241,7 +242,7 @@ void VRPuppets::updateMotorCommands(){
 
         QRadioButton *d = new QRadioButton(widget);
         d->setText("dis");
-        d->setFixedSize(50,30);
+        d->setFixedSize(50, 30);
         d->setCheckable(true);
         d->setObjectName("dis");
         d->setChecked(true);
@@ -250,8 +251,8 @@ void VRPuppets::updateMotorCommands(){
         dis[m.first] = d;
         QObject::connect(d, SIGNAL(clicked()), this, SLOT(controlModeChanged()));
 
-        QSlider *slider = new QSlider(Qt::Orientation::Horizontal,widget);
-        slider->setFixedSize(100,30);
+        QSlider *slider = new QSlider(Qt::Orientation::Horizontal, widget);
+        slider->setFixedSize(100, 30);
         slider->setValue(50);
         widget->layout()->addWidget(slider);
         sliders[m.first] = slider;
@@ -265,7 +266,7 @@ void VRPuppets::updateMotorCommands(){
 
 void VRPuppets::plotData() {
     lock_guard<mutex> lock(mux);
-    if(!ros::ok())
+    if (!ros::ok())
         return;
     for (auto m:ip_address) {
         ui.position_plot->graph(m.first)->setData(time, motor_position[m.first]);
@@ -285,15 +286,15 @@ void VRPuppets::plotData() {
     ui.pwm_plot->replot();
 }
 
-void VRPuppets::rescale(){
+void VRPuppets::rescale() {
     double minima[NUMBER_OF_MOTORS_PER_FPGA][4], maxima[NUMBER_OF_MOTORS_PER_FPGA][4];
-    uint minimal_motor[4] = {0,0,0,0}, maximal_motor[4] = {0,0,0,0};
-    map<int,QVector<double>> *motorData[4];
+    uint minimal_motor[4] = {0, 0, 0, 0}, maximal_motor[4] = {0, 0, 0, 0};
+    map<int, QVector<double>> *motorData[4];
     motorData[0] = &motor_position;
     motorData[1] = &motor_velocity;
     motorData[2] = &motor_displacement;
     motorData[3] = &motor_pwm;
-    for(uint type=0;type<4;type++) {
+    for (uint type = 0; type < 4; type++) {
         for (auto m:ip_address) {
             minima[m.first][type] = 0;
             maxima[m.first][type] = 0;
@@ -314,50 +315,50 @@ void VRPuppets::rescale(){
     }
 
     for (auto m:ip_address) {
-        if (minimal_motor[0] == m.first||maximal_motor[0] == m.first)
+        if (minimal_motor[0] == m.first || maximal_motor[0] == m.first)
             ui.position_plot->graph(m.first)->rescaleAxes();
-        if (minimal_motor[1] == m.first||maximal_motor[1] == m.first)
+        if (minimal_motor[1] == m.first || maximal_motor[1] == m.first)
             ui.velocity_plot->graph(m.first)->rescaleAxes();
-        if (minimal_motor[2] == m.first||maximal_motor[2] == m.first)
+        if (minimal_motor[2] == m.first || maximal_motor[2] == m.first)
             ui.displacement_plot->graph(m.first)->rescaleAxes();
-        if (minimal_motor[3] == m.first||maximal_motor[3] == m.first)
+        if (minimal_motor[3] == m.first || maximal_motor[3] == m.first)
             ui.pwm_plot->graph(m.first)->rescaleAxes();
     }
 
     for (auto m:ip_address) {
-        if (minimal_motor[0] != m.first||maximal_motor[0] != m.first)
+        if (minimal_motor[0] != m.first || maximal_motor[0] != m.first)
             ui.position_plot->graph(m.first)->rescaleAxes(true);
-        if (minimal_motor[1] != m.first||maximal_motor[1] != m.first)
+        if (minimal_motor[1] != m.first || maximal_motor[1] != m.first)
             ui.velocity_plot->graph(m.first)->rescaleAxes(true);
-        if (minimal_motor[2] != m.first||maximal_motor[2] != m.first)
+        if (minimal_motor[2] != m.first || maximal_motor[2] != m.first)
             ui.displacement_plot->graph(m.first)->rescaleAxes(true);
-        if (minimal_motor[3] != m.first||maximal_motor[3] != m.first)
+        if (minimal_motor[3] != m.first || maximal_motor[3] != m.first)
             ui.pwm_plot->graph(m.first)->rescaleAxes(true);
     }
 }
 
-void VRPuppets::sendCommand(){
+void VRPuppets::sendCommand() {
 
-        udp_command->client_addr.sin_port = htons(8001);
+    udp_command->client_addr.sin_port = htons(8001);
+    udp_command->numbytes = 10;
+    for (auto m:ip_address) {
+        mempcpy(udp_command->buf, &set_points[m.first], 4);
+        mempcpy(&udp_command->buf[4], &m.first, 4);
         udp_command->numbytes = 10;
-        for (auto m:ip_address) {
-            mempcpy(udp_command->buf, &set_points[m.first], 4);
-            mempcpy(&udp_command->buf[4], &m.first, 4);
-            udp_command->numbytes = 10;
-            udp_command->client_addr.sin_addr.s_addr = inet_addr(m.second.c_str());
-            udp_command->sendUDPToClient();
-        }
+        udp_command->client_addr.sin_addr.s_addr = inet_addr(m.second.c_str());
+        udp_command->sendUDPToClient();
+    }
 
 }
 
-void VRPuppets::controlModeChanged(){
+void VRPuppets::controlModeChanged() {
     udp_command->client_addr.sin_port = htons(8001);
     udp_command->numbytes = 20;
     int Kp, Ki, Kd;
-    for(auto m:ip_address) {
+    for (auto m:ip_address) {
         bool ok;
         int mode = 0;
-        if (pos[m.first]->isChecked()){
+        if (pos[m.first]->isChecked()) {
             Kp = ui.Kp_pos->text().toInt(&ok);
             if (!ok) {
                 ROS_ERROR("invalid conversion to integer of Kp");
@@ -373,7 +374,7 @@ void VRPuppets::controlModeChanged(){
                 ROS_ERROR("invalid conversion to integer of Kd");
                 return;
             }
-        }else if(vel[m.first]->isChecked()) {
+        } else if (vel[m.first]->isChecked()) {
             Kp = ui.Kp_vel->text().toInt(&ok);
             if (!ok) {
                 ROS_ERROR("invalid conversion to integer of Kp");
@@ -389,39 +390,39 @@ void VRPuppets::controlModeChanged(){
                 ROS_ERROR("invalid conversion to integer of Kd");
                 return;
             }
-        }else if(dis[m.first]->isChecked()) {
+        } else if (dis[m.first]->isChecked()) {
             Kp = ui.Kp_dis->text().toInt(&ok);
-            if(!ok) {
+            if (!ok) {
                 ROS_ERROR("invalid conversion to integer of Kp");
                 return;
             }
             Ki = ui.Ki_dis->text().toInt(&ok);
-            if(!ok) {
+            if (!ok) {
                 ROS_ERROR("invalid conversion to integer of Ki");
                 return;
             }
             Kd = ui.Kd_dis->text().toInt(&ok);
-            if(!ok) {
+            if (!ok) {
                 ROS_ERROR("invalid conversion to integer of Kd");
                 return;
             }
-        }else{
+        } else {
             ROS_ERROR("haeeee????");
             return;
         }
-        mempcpy(&udp_command->buf[0],&Kd,4);
-        mempcpy(&udp_command->buf[4],&Ki,4);
-        mempcpy(&udp_command->buf[8],&Kp,4);
-        mempcpy(&udp_command->buf[12],&control_mode[m.first],4);
-        mempcpy(&udp_command->buf[16],&m.first,4);
+        mempcpy(&udp_command->buf[0], &Kd, 4);
+        mempcpy(&udp_command->buf[4], &Ki, 4);
+        mempcpy(&udp_command->buf[8], &Kp, 4);
+        mempcpy(&udp_command->buf[12], &control_mode[m.first], 4);
+        mempcpy(&udp_command->buf[16], &m.first, 4);
         udp_command->client_addr.sin_addr.s_addr = inet_addr(m.second.c_str());
         udp_command->sendUDPToClient();
     }
 }
 
-void VRPuppets::allToPosition(){
+void VRPuppets::allToPosition() {
     bool ok;
-    for(auto m:ip_address){
+    for (auto m:ip_address) {
         control_mode[m.first] = POSITION;
         pos[m.first]->setChecked(true);
         vel[m.first]->setChecked(false);
@@ -433,9 +434,9 @@ void VRPuppets::allToPosition(){
     sendCommand();
 }
 
-void VRPuppets::allToVelocity(){
+void VRPuppets::allToVelocity() {
     bool ok;
-    for(auto m:ip_address){
+    for (auto m:ip_address) {
         control_mode[m.first] = VELOCITY;
         pos[m.first]->setChecked(false);
         vel[m.first]->setChecked(true);
@@ -447,9 +448,9 @@ void VRPuppets::allToVelocity(){
     sendCommand();
 }
 
-void VRPuppets::allToDisplacement(){
+void VRPuppets::allToDisplacement() {
     bool ok;
-    for(auto m:ip_address){
+    for (auto m:ip_address) {
         control_mode[m.first] = DISPLACEMENT;
         pos[m.first]->setChecked(false);
         vel[m.first]->setChecked(false);
@@ -461,12 +462,12 @@ void VRPuppets::allToDisplacement(){
     sendCommand();
 }
 
-void VRPuppets::sliderMoved(){
+void VRPuppets::sliderMoved() {
     bool ok;
-    for(auto m:ip_address) {
-        if(check[m.first]->isChecked()) {
+    for (auto m:ip_address) {
+        if (check[m.first]->isChecked()) {
             int motor_scale = ui.scale->text().toInt(&ok);
-            if (!ok){
+            if (!ok) {
                 ROS_ERROR("motor scale invalid");
                 return;
             }
@@ -476,28 +477,28 @@ void VRPuppets::sliderMoved(){
     sendCommand();
 }
 
-void VRPuppets::sliderMovedAll(){
+void VRPuppets::sliderMovedAll() {
     bool ok;
     int motor_scale = ui.scale->text().toInt(&ok);
-    for(auto m:ip_address) {
-        if(check[m.first]->isChecked()) {
+    for (auto m:ip_address) {
+        if (check[m.first]->isChecked()) {
             if (!ok) {
                 ROS_ERROR("motor scale invalid");
                 return;
             }
             set_points[m.first] = (ui.setpoint_all->value() - 50) * motor_scale;
-        }else{
+        } else {
             ROS_WARN("ignoring motor %d because it is not activated", m.first);
         }
     }
     char str[100];
-    sprintf(str,"%d",(ui.setpoint_all->value() - 50) * motor_scale);
+    sprintf(str, "%d", (ui.setpoint_all->value() - 50) * motor_scale);
     ui.setpoint->setText(str);
     sendCommand();
 }
 
-void VRPuppets::stop(){
-    if(!ui.stop->isChecked()) {
+void VRPuppets::stop() {
+    if (!ui.stop->isChecked()) {
         ui.stop->setStyleSheet("background-color: red");
         ui.all_to_position->setEnabled(true);
         ui.all_to_velocity->setEnabled(true);
@@ -538,7 +539,7 @@ void VRPuppets::stop(){
                         ui.all_to_displacement->click();
                         break;
                 }
-            } else{
+            } else {
                 ROS_INFO("I am NOT in the saved-temp switch case!");
                 switch (control_mode_temp[m.first]) {
                     case POSITION:
@@ -572,17 +573,17 @@ void VRPuppets::stop(){
                 }
             }
         }
-            saved_temp_control_mode = false;
-            ui.pos_frame->setEnabled(true);
-            ui.vel_frame->setEnabled(true);
-            ui.dis_frame->setEnabled(true);
-            ui.motor_command->setEnabled(true);
-            ui.setpoint_all->setEnabled(true);
-            ui.stop->setText("STOP");
+        saved_temp_control_mode = false;
+        ui.pos_frame->setEnabled(true);
+        ui.vel_frame->setEnabled(true);
+        ui.dis_frame->setEnabled(true);
+        ui.motor_command->setEnabled(true);
+        ui.setpoint_all->setEnabled(true);
+        ui.stop->setText("STOP");
 
         controlModeChanged();
-        sendCommand();
-    }else{
+       // sendCommand();
+    } else {
         ui.stop->setStyleSheet("background-color: green");
         int motor_count = 0;
         bool ok;
@@ -643,37 +644,37 @@ void VRPuppets::stop(){
                     break;
             }
         }
-            saved_temp_control_mode = true;
-            ROS_INFO("Saved current control modes as %d", control_mode_temp[0]);
-            ui.all_to_position->click();
-            ui.pos_frame->setEnabled(false);
-            ui.vel_frame->setEnabled(false);
-            ui.dis_frame->setEnabled(false);
-            ui.motor_command->setEnabled(false);
-            ui.setpoint_all->setEnabled(false);
-            ui.all_to_position->setEnabled(false);
-            ui.all_to_velocity->setEnabled(false);
-            ui.all_to_displacement->setEnabled(false);
-            ui.stop->setText("CONTINUE");
+        saved_temp_control_mode = true;
+        ROS_INFO("Saved current control modes as %d", control_mode_temp[0]);
+        ui.pos_frame->setEnabled(false);
+        ui.vel_frame->setEnabled(false);
+        ui.dis_frame->setEnabled(false);
+        ui.motor_command->setEnabled(false);
+        ui.all_to_position->click();
+        ui.setpoint_all->setEnabled(false);
+        ui.all_to_position->setEnabled(false);
+        ui.all_to_velocity->setEnabled(false);
+        ui.all_to_displacement->setEnabled(false);
+        ui.stop->setText("CONTINUE");
         controlModeChanged();
-        sendCommand();
+       // sendCommand();
     }
 }
 
-void VRPuppets::sendMotorCommandLinearActuators(){
+void VRPuppets::sendMotorCommandLinearActuators() {
     roboy_middleware_msgs::MotorCommand msg;
     msg.id = 69;
-    msg.motors = {0,1,2,3,4,5,6,7,8,9};
-    msg.set_points = {(float)ui.motor0->value(),
-                      (float)ui.motor1->value(),
-                      (float)ui.motor2->value(),
-                      (float)ui.motor3->value(),
-                      (float)ui.motor4->value(),
-                      (float)ui.motor5->value(),0,0,0,0};
+    msg.motors = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    msg.set_points = {(float) ui.motor0->value(),
+                      (float) ui.motor1->value(),
+                      (float) ui.motor2->value(),
+                      (float) ui.motor3->value(),
+                      (float) ui.motor4->value(),
+                      (float) ui.motor5->value(), 0, 0, 0, 0};
     motor_command.publish(msg);
 }
 
-void VRPuppets::serialNode(){
+void VRPuppets::serialNode() {
     system("rosrun rosserial_arduino serial_node.py _port:=/dev/ttyACM0&");
 }
 
@@ -694,14 +695,14 @@ bool VRPuppets::EmergencyCallback(std_srvs::SetBool::Request &req, std_srvs::Set
     return true;
 }
 
-void VRPuppets::zero(){
+void VRPuppets::zero() {
     std_srvs::Empty msg;
     zero_srv.call(msg);
 }
 
-void VRPuppets::newMotor(){
+void VRPuppets::newMotor() {
     time.clear();
-    for(auto m:ip_address) {
+    for (auto m:ip_address) {
         motor_position[m.first].clear();
         motor_velocity[m.first].clear();
         motor_displacement[m.first].clear();
