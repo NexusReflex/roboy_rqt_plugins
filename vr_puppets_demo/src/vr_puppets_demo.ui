@@ -37,8 +37,8 @@
   <widget class="QSlider" name="motor2">
    <property name="geometry">
     <rect>
-     <x>590</x>
-     <y>870</y>
+     <x>950</x>
+     <y>580</y>
      <width>31</width>
      <height>111</height>
     </rect>
@@ -59,8 +59,8 @@
    </property>
    <property name="geometry">
     <rect>
-     <x>1050</x>
-     <y>790</y>
+     <x>1120</x>
+     <y>530</y>
      <width>311</width>
      <height>91</height>
     </rect>
@@ -73,7 +73,7 @@
    <property name="geometry">
     <rect>
      <x>500</x>
-     <y>730</y>
+     <y>700</y>
      <width>221</width>
      <height>61</height>
     </rect>
@@ -86,7 +86,7 @@
    <property name="geometry">
     <rect>
      <x>500</x>
-     <y>560</y>
+     <y>530</y>
      <width>221</width>
      <height>161</height>
     </rect>
@@ -226,8 +226,8 @@
   <widget class="QSlider" name="motor0">
    <property name="geometry">
     <rect>
-     <x>510</x>
-     <y>870</y>
+     <x>870</x>
+     <y>580</y>
      <width>31</width>
      <height>111</height>
     </rect>
@@ -261,8 +261,8 @@
   <widget class="QFrame" name="dis_frame">
    <property name="geometry">
     <rect>
-     <x>1050</x>
-     <y>560</y>
+     <x>320</x>
+     <y>1210</y>
      <width>341</width>
      <height>151</height>
     </rect>
@@ -433,7 +433,7 @@
     <rect>
      <x>0</x>
      <y>530</y>
-     <width>481</width>
+     <width>491</width>
      <height>351</height>
     </rect>
    </property>
@@ -445,7 +445,7 @@
      <rect>
       <x>0</x>
       <y>0</y>
-      <width>479</width>
+      <width>489</width>
       <height>349</height>
      </rect>
     </property>
@@ -454,8 +454,8 @@
   <widget class="QSlider" name="motor3">
    <property name="geometry">
     <rect>
-     <x>630</x>
-     <y>870</y>
+     <x>990</x>
+     <y>580</y>
      <width>31</width>
      <height>111</height>
     </rect>
@@ -476,8 +476,8 @@
    </property>
    <property name="geometry">
     <rect>
-     <x>1050</x>
-     <y>900</y>
+     <x>1120</x>
+     <y>640</y>
      <width>311</width>
      <height>91</height>
     </rect>
@@ -510,8 +510,8 @@
   <widget class="QSlider" name="motor1">
    <property name="geometry">
     <rect>
-     <x>550</x>
-     <y>870</y>
+     <x>910</x>
+     <y>580</y>
      <width>31</width>
      <height>111</height>
     </rect>
@@ -529,8 +529,8 @@
   <widget class="QSlider" name="motor5">
    <property name="geometry">
     <rect>
-     <x>710</x>
-     <y>870</y>
+     <x>1070</x>
+     <y>580</y>
      <width>31</width>
      <height>111</height>
     </rect>
@@ -561,8 +561,8 @@
   <widget class="QPushButton" name="all_to_displacement">
    <property name="geometry">
     <rect>
-     <x>1050</x>
-     <y>720</y>
+     <x>320</x>
+     <y>1370</y>
      <width>311</width>
      <height>51</height>
     </rect>
@@ -574,10 +574,10 @@
   <widget class="QFrame" name="vel_frame">
    <property name="geometry">
     <rect>
-     <x>750</x>
-     <y>560</y>
-     <width>251</width>
-     <height>191</height>
+     <x>20</x>
+     <y>1210</y>
+     <width>271</width>
+     <height>181</height>
     </rect>
    </property>
    <property name="frameShape">
@@ -715,8 +715,8 @@
   <widget class="QSlider" name="motor4">
    <property name="geometry">
     <rect>
-     <x>670</x>
-     <y>870</y>
+     <x>1030</x>
+     <y>580</y>
      <width>31</width>
      <height>111</height>
     </rect>
@@ -734,8 +734,8 @@
   <widget class="QPushButton" name="all_to_velocity">
    <property name="geometry">
     <rect>
-     <x>750</x>
-     <y>730</y>
+     <x>20</x>
+     <y>1400</y>
      <width>261</width>
      <height>61</height>
     </rect>
@@ -747,8 +747,8 @@
   <widget class="QPushButton" name="stop">
    <property name="geometry">
     <rect>
-     <x>1070</x>
-     <y>1280</y>
+     <x>610</x>
+     <y>340</y>
      <width>411</width>
      <height>81</height>
     </rect>
@@ -763,6 +763,66 @@
    </property>
    <property name="checkable">
     <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_18">
+   <property name="geometry">
+    <rect>
+     <x>70</x>
+     <y>1180</y>
+     <width>151</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>14</pointsize>
+     <weight>75</weight>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="text">
+    <string>DO NOT USE!</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_19">
+   <property name="geometry">
+    <rect>
+     <x>870</x>
+     <y>460</y>
+     <width>171</width>
+     <height>51</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>12</pointsize>
+     <weight>75</weight>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="text">
+    <string>Linear Actuators</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_20">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>460</y>
+     <width>171</width>
+     <height>51</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>12</pointsize>
+     <weight>75</weight>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="text">
+    <string>M3 Units</string>
    </property>
   </widget>
  </widget>

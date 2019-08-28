@@ -243,6 +243,10 @@ void VRPuppets_demo::updateMotorCommands() {
 
         QObject::connect(slider, SIGNAL(valueChanged(int)), this, SLOT(sliderMoved()));
 
+        // Disable untested control modes
+        vel[m.first]->setDisabled(true);
+        dis[m.first]->setDisabled(true);
+
         motor_command_scrollarea->layout()->addWidget(widget);
         widgets.push_back(widget);
     }
@@ -315,13 +319,15 @@ void VRPuppets_demo::sendCommand() {
 
     udp_command->client_addr.sin_port = htons(8001);
     udp_command->numbytes = 10;
+    int motorcount = 0;
     for (auto m:ip_address) {
-        mempcpy(udp_command->buf, &set_points[m.first], 4);
+        mempcpy(&udp_command->buf, &set_points[m.first], 4);
         mempcpy(&udp_command->buf[4], &m.first, 4);
         udp_command->numbytes = 10;
         udp_command->client_addr.sin_addr.s_addr = inet_addr(m.second.c_str());
         udp_command->sendUDPToClient();
-        ROS_INFO("Setpoint after sendCommand is %d", set_points[m.first]);
+        ROS_INFO("Setpoint Motor %d after sendCommand is %d", motorcount, set_points[m.first]);
+        motorcount+=1;
     }
 
 }
@@ -332,7 +338,6 @@ void VRPuppets_demo::controlModeChanged() {
     int Kp, Ki, Kd;
     for (auto m:ip_address) {
         bool ok;
-        int mode = 0;
         if (pos[m.first]->isChecked()) {
             Kp = ui.Kp_pos->text().toInt(&ok);
             if (!ok) {
@@ -405,6 +410,8 @@ void VRPuppets_demo::allToPosition() {
         dis[m.first]->setChecked(false);
         set_points[m.first] = ui.setpoint_pos->text().toInt(&ok);
         ROS_INFO("Setpoint after setpoint_pos->text() is %d", set_points[m.first]);
+        sliders[m.first]->setValue(set_points[m.first] + 50);
+//        sliderMovedAll();
     }
     ui.setpoint->setText(ui.setpoint_pos->text());
     controlModeChanged();
@@ -441,6 +448,7 @@ void VRPuppets_demo::allToDisplacement() {
 
 void VRPuppets_demo::sliderMoved() {
     bool ok;
+    int mo = 0;
     for (auto m:ip_address) {
         if (check[m.first]->isChecked()) {
             int motor_scale = ui.scale->text().toInt(&ok);
@@ -449,7 +457,9 @@ void VRPuppets_demo::sliderMoved() {
                 return;
             }
             set_points[m.first] = (sliders[m.first]->value() - 50) * motor_scale;
+            ROS_INFO("Slider setpont motor %d is %d", mo, set_points[m.first]);
         }
+        mo+=1;
     }
     sendCommand();
 }
@@ -471,6 +481,7 @@ void VRPuppets_demo::sliderMovedAll() {
     char str[100];
     sprintf(str, "%d", (ui.setpoint_all->value() - 50) * motor_scale);
     ui.setpoint->setText(str);
+//    controlModeChanged();
     sendCommand();
 }
 
@@ -629,7 +640,6 @@ void VRPuppets_demo::stop() {
         ui.vel_frame->setEnabled(false);
         ui.dis_frame->setEnabled(false);
         ui.motor_command->setEnabled(false);
-        // ui.all_to_position->click();
         ui.setpoint_all->setEnabled(false);
         ui.all_to_position->setEnabled(false);
         ui.all_to_velocity->setEnabled(false);
