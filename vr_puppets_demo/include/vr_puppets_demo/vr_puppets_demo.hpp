@@ -77,7 +77,9 @@ private:
     vector<QWidget*> widgets;
     map<int,QCheckBox*> check;
     map<int,QSlider*> sliders;
+    map<int, bool>init_set;
     map<int,QLineEdit*> single_motor_setpoints;
+    map<int, int> init_setpoints;
     QVector<double> time;
     int counter = 0;
     map<int,QVector<double>> motor_position, motor_velocity, motor_displacement, motor_force, motor_pwm;
