@@ -78,8 +78,12 @@ void VRPuppets_demo::initPlugin(qt_gui_cpp::PluginContext &context) {
         ui.position_plot->graph(motor)->setPen(
                 QPen(color_pallette[motor % 16])); // %16 because we only have 16 colors :(
     }
+    ui.position_plot->plotLayout()->insertRow(0);
+    ui.position_plot->plotLayout()->addElement(0, 0, new QCPPlotTitle(ui.position_plot, "M3 Positions"));
+
     ui.position_plot->xAxis->setLabel("time[s]");
     ui.position_plot->yAxis->setLabel("ticks");
+    ui.position_plot->legend->setVisible(true);
     ui.position_plot->replot();
 
     updateMotorCommands();
@@ -548,7 +552,7 @@ void VRPuppets_demo::stop() {
                     sprintf(str, "%d", Kd[m.first]);
                     ui.Kd_pos->setText(str);
                     motor+=1;
-                    controlModeChangedSingleMotor(m_nr, ip);
+//                    controlModeChangedSingleMotor(m_nr, ip);
                     break;
                     // Velocity and displacement unused!
                 case VELOCITY:
@@ -581,7 +585,7 @@ void VRPuppets_demo::stop() {
                         ui.Kd_pos->setText(str);
                         ui.all_to_position->click();
                         motor+=1;
-                        controlModeChangedSingleMotor(m_nr, ip);
+//                        controlModeChangedSingleMotor(m_nr, ip);
                         break;
                         // Velocity and displacement unused!
                     case VELOCITY:
