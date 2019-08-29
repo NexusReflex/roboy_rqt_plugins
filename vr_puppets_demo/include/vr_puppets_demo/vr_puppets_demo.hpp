@@ -62,7 +62,8 @@ public Q_SLOTS:
     void serialNode();
     void zero();
     void newMotor();
-    void controlModeChangedSingleMotor(int &m, string &ip);
+    void controlModeChangedSingleMotor(const int &m, string &ip);
+    void moveSlider();
 private:
     void receiveStatusUDP();
     void updateMotorCommands();
@@ -76,6 +77,7 @@ private:
     vector<QWidget*> widgets;
     map<int,QCheckBox*> check;
     map<int,QSlider*> sliders;
+    map<int,QLineEdit*> single_motor_setpoints;
     QVector<double> time;
     int counter = 0;
     map<int,QVector<double>> motor_position, motor_velocity, motor_displacement, motor_force, motor_pwm;
