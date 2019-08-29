@@ -67,7 +67,7 @@ void VRPuppets_demo::initPlugin(qt_gui_cpp::PluginContext &context) {
     scrollArea->setWidget(motor_command_scrollarea);
 
     uint32_t ip;
-    inet_pton(AF_INET, "10.42.0.1", &ip); //todo: insert HOST_IP -> roboy wifi: d2.168.255.255
+    inet_pton(AF_INET, "10.42.0.1", &ip); //todo: insert HOST_IP -> roboy wifi: 192.168.255.255
     udp.reset(new UDPSocket(8000));
     udp_command.reset(new UDPSocket(8001));
     udp_thread.reset(new std::thread(&VRPuppets_demo::receiveStatusUDP, this));
@@ -259,7 +259,6 @@ void VRPuppets_demo::plotData() {
     for (auto m:ip_address) {
         ui.position_plot->graph(m.first)->setData(time, motor_position[m.first]);
     }
-
     ui.position_plot->xAxis->rescale();
     ui.position_plot->replot();
 }
@@ -332,14 +331,53 @@ void VRPuppets_demo::sendCommand() {
 
 }
 
+// Only position mode K-value changes
+void VRPuppets_demo::controlModeChangedSingleMotor(int &motor_nr, string &ip) {
+    udp_command->client_addr.sin_port = htons(8001);
+    udp_command->numbytes = 20;
+    int Kp, Ki, Kd;
+    bool ok;
+    if (pos[motor_nr]->isChecked()) {
+        Kp = ui.Kp_pos->text().toInt(&ok);
+        ROS_INFO("ControlModeChanged: ui.KP used for motor %d is %d", motor_nr, Kp);
+        if (!ok) {
+            ROS_ERROR("invalid conversion to integer of Kp");
+            return;
+        }
+        Ki = ui.Ki_pos->text().toInt(&ok);
+        if (!ok) {
+            ROS_ERROR("invalid conversion to integer of Ki");
+            return;
+        }
+        Kd = ui.Kd_pos->text().toInt(&ok);
+        if (!ok) {
+            ROS_ERROR("invalid conversion to integer of Kd");
+            return;
+        }
+    } else{
+        ROS_ERROR("Not in position mode");
+    }
+
+    mempcpy(&udp_command->buf[0], &Kd, 4);
+    mempcpy(&udp_command->buf[4], &Ki, 4);
+    mempcpy(&udp_command->buf[8], &Kp, 4);
+    mempcpy(&udp_command->buf[12], &control_mode[motor_nr], 4);
+    mempcpy(&udp_command->buf[16], &motor_nr, 4);
+    udp_command->client_addr.sin_addr.s_addr = inet_addr(ip.c_str());
+    udp_command->sendUDPToClient();
+    ROS_INFO("SEND controlModeChanged to motor %d", motor_nr);
+}
+
 void VRPuppets_demo::controlModeChanged() {
     udp_command->client_addr.sin_port = htons(8001);
     udp_command->numbytes = 20;
     int Kp, Ki, Kd;
+    int motor = 0;
     for (auto m:ip_address) {
         bool ok;
         if (pos[m.first]->isChecked()) {
             Kp = ui.Kp_pos->text().toInt(&ok);
+            ROS_INFO("ControlModeChanged: ui.KP used for motor %d is %d", motor, Kp);
             if (!ok) {
                 ROS_ERROR("invalid conversion to integer of Kp");
                 return;
@@ -390,6 +428,7 @@ void VRPuppets_demo::controlModeChanged() {
             ROS_ERROR("haeeee????");
             return;
         }
+        motor += 1;
         mempcpy(&udp_command->buf[0], &Kd, 4);
         mempcpy(&udp_command->buf[4], &Ki, 4);
         mempcpy(&udp_command->buf[8], &Kp, 4);
@@ -403,6 +442,8 @@ void VRPuppets_demo::controlModeChanged() {
 void VRPuppets_demo::allToPosition() {
     bool ok;
     for (auto m:ip_address) {
+        int m_nr = m.first;
+        string ip = m.second;
 //        ROS_INFO("Setpoint before anything is %d", set_points[m.first]);
         control_mode[m.first] = POSITION;
         pos[m.first]->setChecked(true);
@@ -412,9 +453,10 @@ void VRPuppets_demo::allToPosition() {
 //        ROS_INFO("Setpoint after setpoint_pos->text() is %d", set_points[m.first]);
         sliders[m.first]->setValue(set_points[m.first] + 50);
 //        sliderMovedAll();
+        controlModeChangedSingleMotor(m_nr, ip);
     }
     ui.setpoint->setText(ui.setpoint_pos->text());
-    controlModeChanged();
+//    controlModeChanged();
     sendCommand();
 }
 
@@ -481,7 +523,6 @@ void VRPuppets_demo::sliderMovedAll() {
     char str[100];
     sprintf(str, "%d", (ui.setpoint_all->value() - 50) * motor_scale);
     ui.setpoint->setText(str);
-//    controlModeChanged();
     sendCommand();
 }
 
@@ -492,16 +533,22 @@ void VRPuppets_demo::stop() {
 //        ui.all_to_velocity->setEnabled(true);
 //        ui.all_to_displacement->setEnabled(true);
         char str[100];
+        int motor = 0;
         for (auto m:ip_address) {
-//            if (saved_temp_control_mode) {
-            switch (control_mode_temp[m.first]) {
+            int m_nr = m.first;
+            string ip = m.second;
+            if(!saved_temp_control_mode){
+            switch (control_mode[m.first]) {
                 case POSITION:
                     sprintf(str, "%d", Kp[m.first]);
                     ui.Kp_pos->setText(str);
+                    ROS_INFO("INIT NO STOP: KP_pos of motor %d set to %s", motor, str);
                     sprintf(str, "%d", Ki[m.first]);
                     ui.Ki_pos->setText(str);
                     sprintf(str, "%d", Kd[m.first]);
                     ui.Kd_pos->setText(str);
+                    motor+=1;
+                    controlModeChangedSingleMotor(m_nr, ip);
                     break;
                     // Velocity and displacement unused!
                 case VELOCITY:
@@ -511,7 +558,6 @@ void VRPuppets_demo::stop() {
                     ui.Ki_vel->setText(str);
                     sprintf(str, "%d", Kd[m.first]);
                     ui.Kd_vel->setText(str);
-                    ui.all_to_velocity->click();
                     break;
                 case DISPLACEMENT:
                     sprintf(str, "%d", Kp[m.first]);
@@ -520,42 +566,45 @@ void VRPuppets_demo::stop() {
                     ui.Ki_dis->setText(str);
                     sprintf(str, "%d", Kd[m.first]);
                     ui.Kd_dis->setText(str);
-                    ui.all_to_displacement->click();
                     break;
             }
+            } else {
+//                ROS_INFO("I am NOT in the saved-temp switch case!");
+                switch (control_mode_temp[m.first]) {
+                    case POSITION:
+                        sprintf(str, "%d", Kp[m.first]);
+                        ui.Kp_pos->setText(str);
+                        ROS_INFO("ON CONTINUE PRESSED: KP_pos of motor %d set to %s", motor, str);
+                        sprintf(str, "%d", Ki[m.first]);
+                        ui.Ki_pos->setText(str);
+                        sprintf(str, "%d", Kd[m.first]);
+                        ui.Kd_pos->setText(str);
+                        ui.all_to_position->click();
+                        motor+=1;
+                        controlModeChangedSingleMotor(m_nr, ip);
+                        break;
+                        // Velocity and displacement unused!
+                    case VELOCITY:
+                        sprintf(str, "%d", Kp[m.first]);
+                        ui.Kp_vel->setText(str);
+                        sprintf(str, "%d", Ki[m.first]);
+                        ui.Ki_vel->setText(str);
+                        sprintf(str, "%d", Kd[m.first]);
+                        ui.Kd_vel->setText(str);
+                        ui.all_to_velocity->click();
+                        break;
+                    case DISPLACEMENT:
+                        sprintf(str, "%d", Kp[m.first]);
+                        ui.Kp_dis->setText(str);
+                        sprintf(str, "%d", Ki[m.first]);
+                        ui.Ki_dis->setText(str);
+                        sprintf(str, "%d", Kd[m.first]);
+                        ui.Kd_dis->setText(str);
+                        ui.all_to_displacement->click();
+                        break;
+                }
+            }
         }
-//            } else {
-////                ROS_INFO("I am NOT in the saved-temp switch case!");
-//                switch (control_mode_temp[m.first]) {
-//                    case POSITION:
-//                        sprintf(str, "%d", Kp[m.first]);
-//                        ui.Kp_pos->setText(str);
-//                        sprintf(str, "%d", Ki[m.first]);
-//                        ui.Ki_pos->setText(str);
-//                        sprintf(str, "%d", Kd[m.first]);
-//                        ui.Kd_pos->setText(str);
-//                        break;
-//                        // Velocity and displacement unused!
-//                    case VELOCITY:
-//                        sprintf(str, "%d", Kp[m.first]);
-//                        ui.Kp_vel->setText(str);
-//                        sprintf(str, "%d", Ki[m.first]);
-//                        ui.Ki_vel->setText(str);
-//                        sprintf(str, "%d", Kd[m.first]);
-//                        ui.Kd_vel->setText(str);
-//                        ui.all_to_velocity->click();
-//                        break;
-//                    case DISPLACEMENT:
-//                        sprintf(str, "%d", Kp[m.first]);
-//                        ui.Kp_dis->setText(str);
-//                        sprintf(str, "%d", Ki[m.first]);
-//                        ui.Ki_dis->setText(str);
-//                        sprintf(str, "%d", Kd[m.first]);
-//                        ui.Kd_dis->setText(str);
-//                        ui.all_to_displacement->click();
-//                        break;
-//                }
-//            }
         saved_temp_control_mode = false;
         ui.pos_frame->setEnabled(true);
         ui.vel_frame->setEnabled(true);
@@ -565,7 +614,7 @@ void VRPuppets_demo::stop() {
         ui.setpoint_all->setEnabled(true);
         ui.stop->setText("STOP");
 
-        controlModeChanged();
+//        controlModeChanged();
 //        sendCommand();
     } else {
         ui.stop->setStyleSheet("background-color: green");
@@ -581,26 +630,32 @@ void VRPuppets_demo::stop() {
         int Kp_dis = ui.Kp_dis->text().toInt(&ok);
         int Ki_dis = ui.Ki_dis->text().toInt(&ok);
         int Kd_dis = ui.Kd_dis->text().toInt(&ok);
+        int motor = 0;
         for (auto m:ip_address) {
             int mode = 0;
-            motor_count += 1;
+            int m_nr = m.first;
+            string ip = m.second;
             ROS_INFO("Shutting down motor %d", motor_count);
 //            ROS_INFO("Init Control Mode of Motor %d is %d.", motor_count, control_mode[m.first]);
             switch (control_mode[m.first]) {
                 case POSITION:
-                    mode = 1;
+                    mode = 0;
                     Kp[m.first] = Kp_pos;
                     Ki[m.first] = Ki_pos;
                     Kd[m.first] = Kd_pos;
                     ui.Kp_pos->setText("0");
                     ui.Ki_pos->setText("0");
                     ui.Kd_pos->setText("0");
-                    ROS_INFO("Setpoint motor %d is %d", motor_count, set_points[m.first]);
                     control_mode_temp[m.first] = 0;
+                    ROS_INFO("ON STOP: ui.KP_pos of motor %d set to %d", motor, Kp[m.first]);
+                    ROS_INFO("ON STOP: KP to send to motor %d set to %d", motor, Kp[m.first]);
+                    ROS_INFO("ON STOP: Setpoint motor %d is %d", motor_count, set_points[m.first]);
+                    motor +=1;
+                    controlModeChangedSingleMotor(m_nr, ip);
                     break;
                     // Velocity and displacement unused!
                 case VELOCITY:
-                    mode = 2;
+                    mode = 1;
                     Kp[m.first] = Kp_vel;
                     Ki[m.first] = Ki_vel;
                     Kd[m.first] = Kd_vel;
@@ -608,10 +663,10 @@ void VRPuppets_demo::stop() {
                     ui.Ki_vel->setText("0");
                     ui.Kd_vel->setText("0");
                     control_mode_temp[m.first] = 1;
-                    ui.all_to_velocity->click();
+//                    ui.all_to_velocity->click();
                     break;
                 case DISPLACEMENT:
-                    mode = 3;
+                    mode = 2;
                     Kp[m.first] = Kp_dis;
                     Ki[m.first] = Ki_dis;
                     Kd[m.first] = Kd_dis;
@@ -619,7 +674,7 @@ void VRPuppets_demo::stop() {
                     ui.Ki_dis->setText("0");
                     ui.Kd_dis->setText("0");
                     control_mode_temp[m.first] = 2;
-                    ui.all_to_displacement->click();
+//                    ui.all_to_displacement->click();
                     break;
             }
         }
@@ -629,13 +684,13 @@ void VRPuppets_demo::stop() {
         ui.vel_frame->setEnabled(false);
         ui.dis_frame->setEnabled(false);
         ui.motor_command->setEnabled(false);
-        ui.setpoint_all->setEnabled(false);
 //        ui.all_to_position->click();
+        ui.setpoint_all->setEnabled(false);
         ui.all_to_position->setEnabled(false);
         ui.all_to_velocity->setEnabled(false);
         ui.all_to_displacement->setEnabled(false);
         ui.stop->setText("CONTINUE");
-        controlModeChanged();
+//        controlModeChanged();
 //        sendCommand();
     }
 }

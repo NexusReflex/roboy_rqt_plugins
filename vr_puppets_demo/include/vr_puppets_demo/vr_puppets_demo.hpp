@@ -62,6 +62,7 @@ public Q_SLOTS:
     void serialNode();
     void zero();
     void newMotor();
+    void controlModeChangedSingleMotor(int &m, string &ip);
 private:
     void receiveStatusUDP();
     void updateMotorCommands();
