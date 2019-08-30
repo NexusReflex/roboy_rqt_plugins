@@ -38,6 +38,7 @@ void VRPuppets_demo::initPlugin(qt_gui_cpp::PluginContext &context) {
     QObject::connect(ui.all_to_position, SIGNAL(clicked()), this, SLOT(allToPosition()));
     QObject::connect(ui.all_to_velocity, SIGNAL(clicked()), this, SLOT(allToVelocity()));
     QObject::connect(ui.all_to_displacement, SIGNAL(clicked()), this, SLOT(allToDisplacement()));
+    QObject::connect(ui.all_to_position_mode, SIGNAL(clicked()), this, SLOT(setPositionModeForAll()));
     QObject::connect(ui.stop, SIGNAL(clicked()), this, SLOT(stop()));
     QObject::connect(ui.motor0, SIGNAL(valueChanged(int)), this, SLOT(sendMotorCommandLinearActuators()));
     QObject::connect(ui.motor1, SIGNAL(valueChanged(int)), this, SLOT(sendMotorCommandLinearActuators()));
@@ -514,17 +515,34 @@ void VRPuppets_demo::controlModeChanged() {
     }
 }
 
+///** Set all M3s to Position Mode with their indipendent setpoints -> for init **/
+void VRPuppets_demo::setPositionModeForAll(){
+    bool ok;
+    int motor_scale = ui.scale->text().toInt(&ok);
+    for (auto m:ip_address) {
+        control_mode[m.first] = POSITION;
+        pos[m.first]->setChecked(true);
+        vel[m.first]->setChecked(false);
+        dis[m.first]->setChecked(false);
+        set_points[m.first] = (single_motor_setpoints[m.first]->text().toInt());
+        sliders[m.first]->setValue((single_motor_setpoints[m.first]->text().toInt() / motor_scale) + 50); // +50
+        controlModeChangedSingleMotor(m.first, m.second);
+    }
+    ui.setpoint->setText(ui.setpoint_pos->text());
+//    sendCommand();
+}
 /** Set all M3s to Position Mode with same setpoint given in ui.setpoint_pos **/
 void VRPuppets_demo::allToPosition() {
     bool ok;
     char str[100];
+    int motor_scale = ui.scale->text().toInt(&ok);
     for (auto m:ip_address) {
         control_mode[m.first] = POSITION;
         pos[m.first]->setChecked(true);
         vel[m.first]->setChecked(false);
         dis[m.first]->setChecked(false);
         set_points[m.first] = ui.setpoint_pos->text().toInt(&ok);
-        sliders[m.first]->setValue(set_points[m.first] + 50);
+        sliders[m.first]->setValue((set_points[m.first]/motor_scale) + 50);
 
         //Update single motor setpoints in Gui
         sprintf(str, "%d", set_points[m.first]);
@@ -785,6 +803,7 @@ void VRPuppets_demo::newMotor() {
         motor_pwm[m.first].clear();
     }
     updateMotorCommands();
+//    setPositionModeForAll();
     udp_thread.reset(new std::thread(&VRPuppets_demo::receiveStatusUDP, this));
     udp_thread->detach();
 }
@@ -822,7 +841,7 @@ bool VRPuppets_demo::StateTransmissionCallback(std_srvs::SetBool::Request &req, 
         ROS_INFO("State transition service called.");
         // Do stuff
         bool ok;
-        int pull_displacement = 200;
+        int pull_displacement = ui.state_transmission_displacement->text().toInt(&ok);
 
         for (auto m:ip_address){
             char str[100];

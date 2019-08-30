@@ -64,6 +64,7 @@ public Q_SLOTS:
     void newMotor();
     void controlModeChangedSingleMotor(const int &m, string &ip);
     void moveSlider();
+    void setPositionModeForAll();
 private:
     void receiveStatusUDP();
     void updateMotorCommands();
