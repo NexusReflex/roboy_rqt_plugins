@@ -97,6 +97,7 @@ private:
     ros::Publisher motor_command;
     ros::ServiceClient zero_srv;
     ros::ServiceServer e_stop_server;
+    ros::ServiceServer state_transmission_server;
     ros::Time start_time;
     boost::shared_ptr<ros::AsyncSpinner> spinner;
     UDPSocketPtr udp, udp_command;
@@ -106,4 +107,5 @@ private:
     mutex mux;
 
     bool EmergencyCallback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res);
+    bool StateTransmissionCallback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res);
 };

@@ -9,6 +9,7 @@ VRPuppets_demo::VRPuppets_demo()
     setObjectName("VRPuppets");
 }
 
+/** Initialize RQT Gui Plugin**/
 void VRPuppets_demo::initPlugin(qt_gui_cpp::PluginContext &context) {
     // access standalone command line arguments
     QStringList argv = context.argv();
@@ -30,6 +31,7 @@ void VRPuppets_demo::initPlugin(qt_gui_cpp::PluginContext &context) {
     motor_command = nh->advertise<roboy_middleware_msgs::MotorCommand>("/stepper_motor_shield/MotorCommand", 1);
     zero_srv = nh->serviceClient<std_srvs::Empty>("/stepper_motor_shield/zero");
     e_stop_server = nh->advertiseService("/m3/emergency_stop", &VRPuppets_demo::EmergencyCallback, this);
+    state_transmission_server = nh->advertiseService("/vr_puppets/state_transmission", &VRPuppets_demo::StateTransmissionCallback, this);
 
     QObject::connect(this, SIGNAL(new_data()), this, SLOT(plotData()));
     QObject::connect(this, SIGNAL(new_motor()), this, SLOT(newMotor()));
@@ -46,7 +48,7 @@ void VRPuppets_demo::initPlugin(qt_gui_cpp::PluginContext &context) {
     QObject::connect(ui.serial_node, SIGNAL(clicked()), this, SLOT(serialNode()));
     QObject::connect(ui.zero, SIGNAL(clicked()), this, SLOT(zero()));
     ui.stop->setStyleSheet("background-color: red");
-    QObject::connect(ui.setpoint_all, SIGNAL(valueChanged(int)), this, SLOT(sliderMovedAll()));
+    QObject::connect(ui.setpoint_all, SIGNAL(returnPressed()), this, SLOT(sliderMovedAll()));
 
     spinner.reset(new ros::AsyncSpinner(2));
     spinner->start();
@@ -104,6 +106,7 @@ void VRPuppets_demo::restoreSettings(const qt_gui_cpp::Settings &plugin_settings
     // v = instance_settings.value(k)
 }
 
+/** Receive current motor pos, vel, dis, pwm **/
 void VRPuppets_demo::receiveStatusUDP() {
     ROS_INFO("start receiving udp");
     ros::Time t0 = ros::Time::now(), t1;
@@ -161,7 +164,6 @@ void VRPuppets_demo::receiveStatusUDP() {
                 motor_displacement[m.first].push_back(motor_displacement[m.first].back());
                 motor_pwm[m.first].push_back(motor_pwm[m.first].back());
             }
-//            ROS_INFO_THROTTLE(1,"receiving status from motor %d, pos=%d, vel=%d, dis=%d, pwm=%d",motor,pos,vel,dis,pwm);
             if (motor_position[motor].size() > samples_per_plot) {
                 for (auto m:ip_address) {
                     motor_position[m.first].pop_front();
@@ -184,6 +186,7 @@ void VRPuppets_demo::receiveStatusUDP() {
     ROS_INFO("stop receiving udp");
 }
 
+/** Updade motor command widget in Gui when new motors are available **/
 void VRPuppets_demo::updateMotorCommands() {
     for (auto w:widgets) {
         motor_command_scrollarea->layout()->removeWidget(w);
@@ -272,6 +275,7 @@ void VRPuppets_demo::updateMotorCommands() {
     }
 }
 
+/** Plot motor position feedback for all Units**/
 void VRPuppets_demo::plotData() {
     lock_guard<mutex> lock(mux);
     if (!ros::ok())
@@ -283,7 +287,7 @@ void VRPuppets_demo::plotData() {
     ui.position_plot->replot();
 }
 
-
+/** Rescale Plot **/
 void VRPuppets_demo::rescale() {
     double minima[NUMBER_OF_MOTORS_PER_FPGA][4], maxima[NUMBER_OF_MOTORS_PER_FPGA][4];
     uint minimal_motor[4] = {0, 0, 0, 0}, maximal_motor[4] = {0, 0, 0, 0};
@@ -579,7 +583,7 @@ void VRPuppets_demo::sliderMoved() {
     sendCommand();
 }
 
-/** Move all M3s together according to main slider **/
+/** Move all M3s together according to main slider setpoint**/
 void VRPuppets_demo::sliderMovedAll() {
     bool ok;
     int motor_scale = ui.scale->text().toInt(&ok);
@@ -600,7 +604,10 @@ void VRPuppets_demo::sliderMovedAll() {
     sendCommand();
 }
 
-/** Stop and restart M3s **/
+/** Stop and restart M3s.
+ * On "continue" by using the 'follow' checkboxeiter old setpoints can be resumed
+ * and motors start moving right away, or motors stay at their stop point.
+ */
 void VRPuppets_demo::stop() {
     if (!ui.stop->isChecked()) {
         ui.stop->setStyleSheet("background-color: red");
@@ -702,7 +709,6 @@ void VRPuppets_demo::stop() {
         int Kd_dis = ui.Kd_dis->text().toInt(&ok);
         for (auto m:ip_address) {
             ROS_INFO("Shutting down motor %d", motor_count);
-//            ROS_INFO("Init Control Mode of Motor %d is %d.", motor_count, control_mode[m.first]);
             switch (control_mode[m.first]) {
                 case POSITION:
                     Kp[m.first] = Kp_pos;
@@ -750,6 +756,27 @@ void VRPuppets_demo::stop() {
     }
 }
 
+/** Start ROSSerial Node for the Linear Actuators **/
+ void VRPuppets_demo::serialNode() {
+    system("rosrun rosserial_arduino serial_node.py _port:=/dev/ttyACM0&");
+}
+
+/** Detect wifi boards and add new motors to gui **/
+void VRPuppets_demo::newMotor() {
+    time.clear();
+    for (auto m:ip_address) {
+        motor_position[m.first].clear();
+        motor_velocity[m.first].clear();
+        motor_displacement[m.first].clear();
+        motor_pwm[m.first].clear();
+    }
+    updateMotorCommands();
+    udp_thread.reset(new std::thread(&VRPuppets_demo::receiveStatusUDP, this));
+    udp_thread->detach();
+}
+
+/* ROS related stuff (Pupblisher, Subscriber, Service servers...) */
+
 /** Read out and send Commands to Lin. Actuators **/
 void VRPuppets_demo::sendMotorCommandLinearActuators() {
     roboy_middleware_msgs::MotorCommand msg;
@@ -764,12 +791,8 @@ void VRPuppets_demo::sendMotorCommandLinearActuators() {
     motor_command.publish(msg);
 }
 
-/** Start ROSSerial Node for the Linear Actuators **/
-void VRPuppets_demo::serialNode() {
-    system("rosrun rosserial_arduino serial_node.py _port:=/dev/ttyACM0&");
-}
-
-/** React to external Emegencystop (old setup -> not applicable anymore) **/
+/** React to external Emegencystop
+ * (old setup -> probably not applicable anymore) **/
 bool VRPuppets_demo::EmergencyCallback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res) {
     if (req.data == 1) {
         ROS_INFO("M3-Emergency stop service called.");
@@ -787,26 +810,34 @@ bool VRPuppets_demo::EmergencyCallback(std_srvs::SetBool::Request &req, std_srvs
     return true;
 }
 
+/** Service callback for OUI-Team State transmission
+ * Initiates short pulling of the tendons of M3s 0, 1, 2
+ * to slightly pull back the VR-operator.
+ * @param req
+ * @param res
+ * @return
+ */
+bool VRPuppets_demo::StateTransmissionCallback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res) {
+    if (req.data == 1) {
+        ROS_INFO("State transition service called.");
+        // Do stuff
+
+        res.success = true;
+        res.message = "State transition service called";
+    } else {
+        // There is nothing to do
+        res.success = false;
+        res.message = "State transition service call unsuccsessful.";
+    }
+    return true;
+}
+
 /** Send all Lin. Actuators to Zero position
  * !CAUTION!: Do only use when end stops are mounted!
  **/
 void VRPuppets_demo::zero() {
     std_srvs::Empty msg;
     zero_srv.call(msg);
-}
-
-/** Detect wifi boards and add new motors to gui **/
-void VRPuppets_demo::newMotor() {
-    time.clear();
-    for (auto m:ip_address) {
-        motor_position[m.first].clear();
-        motor_velocity[m.first].clear();
-        motor_displacement[m.first].clear();
-        motor_pwm[m.first].clear();
-    }
-    updateMotorCommands();
-    udp_thread.reset(new std::thread(&VRPuppets_demo::receiveStatusUDP, this));
-    udp_thread->detach();
 }
 
 PLUGINLIB_EXPORT_CLASS(VRPuppets_demo, rqt_gui_cpp::Plugin)
