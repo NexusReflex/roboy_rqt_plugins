@@ -64,7 +64,6 @@ public Q_SLOTS:
     void newMotor();
     void controlModeChangedSingleMotor(const int &m, string &ip);
     void moveSlider();
-    void setPositionModeForAll();
 private:
     void receiveStatusUDP();
     void updateMotorCommands();
@@ -78,14 +77,7 @@ private:
     vector<QWidget*> widgets;
     map<int,QCheckBox*> check;
     map<int,QSlider*> sliders;
-    map<int, bool>init_set = {
-            {0, false},
-            {1, false},
-            {2, false},
-            {3, false},
-            {4, false},
-            {5, false}
-    };
+    map<int, bool>init_set;
     map<int,QLineEdit*> single_motor_setpoints;
     map<int, int> init_setpoints;
     QVector<double> time;
