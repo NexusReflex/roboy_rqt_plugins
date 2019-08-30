@@ -4489,6 +4489,33 @@
     </property>
    </widget>
   </widget>
+  <widget class="QLineEdit" name="state_transmission_displacement">
+   <property name="geometry">
+    <rect>
+     <x>850</x>
+     <y>770</y>
+     <width>61</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>1</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_34">
+   <property name="geometry">
+    <rect>
+     <x>930</x>
+     <y>750</y>
+     <width>201</width>
+     <height>61</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>State transmission 
+ Displacement</string>
+   </property>
+  </widget>
   <zorder>m3_background</zorder>
   <zorder>vel_frame</zorder>
   <zorder>m3_background_3</zorder>
@@ -4515,6 +4542,8 @@
   <zorder>label_18</zorder>
   <zorder>label_19</zorder>
   <zorder>label_20</zorder>
+  <zorder>state_transmission_displacement</zorder>
+  <zorder>label_34</zorder>
  </widget>
  <customwidgets>
   <customwidget>
