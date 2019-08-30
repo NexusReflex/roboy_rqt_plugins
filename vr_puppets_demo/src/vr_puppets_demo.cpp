@@ -48,7 +48,7 @@ void VRPuppets_demo::initPlugin(qt_gui_cpp::PluginContext &context) {
     QObject::connect(ui.serial_node, SIGNAL(clicked()), this, SLOT(serialNode()));
     QObject::connect(ui.zero, SIGNAL(clicked()), this, SLOT(zero()));
     ui.stop->setStyleSheet("background-color: red");
-    QObject::connect(ui.setpoint_all, SIGNAL(returnPressed()), this, SLOT(sliderMovedAll()));
+    QObject::connect(ui.setpoint_all, SIGNAL(valueChanged(int)), this, SLOT(sliderMovedAll()));
 
     spinner.reset(new ros::AsyncSpinner(2));
     spinner->start();
@@ -104,6 +104,25 @@ void VRPuppets_demo::saveSettings(qt_gui_cpp::Settings &plugin_settings,
 void VRPuppets_demo::restoreSettings(const qt_gui_cpp::Settings &plugin_settings,
                                      const qt_gui_cpp::Settings &instance_settings) {
     // v = instance_settings.value(k)
+}
+
+/** Start ROSSerial Node for the Linear Actuators **/
+void VRPuppets_demo::serialNode() {
+    system("rosrun rosserial_arduino serial_node.py _port:=/dev/ttyACM0&");
+}
+
+/** Read out and send Commands to Lin. Actuators **/
+void VRPuppets_demo::sendMotorCommandLinearActuators() {
+    roboy_middleware_msgs::MotorCommand msg;
+    msg.id = 69;
+    msg.motors = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    msg.set_points = {(float) ui.motor0->value(),
+                      (float) ui.motor1->value(),
+                      (float) ui.motor2->value(),
+                      (float) ui.motor3->value(),
+                      (float) ui.motor4->value(),
+                      (float) ui.motor5->value(), 0, 0, 0, 0};
+    motor_command.publish(msg);
 }
 
 /** Receive current motor pos, vel, dis, pwm **/
@@ -267,8 +286,8 @@ void VRPuppets_demo::updateMotorCommands() {
 
 
         // Disable untested control modes
-        vel[m.first]->setDisabled(true);
-        dis[m.first]->setDisabled(true);
+        vel[m.first]->setDisabled(false);
+        dis[m.first]->setDisabled(false);
 
         motor_command_scrollarea->layout()->addWidget(widget);
         widgets.push_back(widget);
@@ -756,11 +775,6 @@ void VRPuppets_demo::stop() {
     }
 }
 
-/** Start ROSSerial Node for the Linear Actuators **/
- void VRPuppets_demo::serialNode() {
-    system("rosrun rosserial_arduino serial_node.py _port:=/dev/ttyACM0&");
-}
-
 /** Detect wifi boards and add new motors to gui **/
 void VRPuppets_demo::newMotor() {
     time.clear();
@@ -776,20 +790,6 @@ void VRPuppets_demo::newMotor() {
 }
 
 /* ROS related stuff (Pupblisher, Subscriber, Service servers...) */
-
-/** Read out and send Commands to Lin. Actuators **/
-void VRPuppets_demo::sendMotorCommandLinearActuators() {
-    roboy_middleware_msgs::MotorCommand msg;
-    msg.id = 69;
-    msg.motors = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-    msg.set_points = {(float) ui.motor0->value(),
-                      (float) ui.motor1->value(),
-                      (float) ui.motor2->value(),
-                      (float) ui.motor3->value(),
-                      (float) ui.motor4->value(),
-                      (float) ui.motor5->value(), 0, 0, 0, 0};
-    motor_command.publish(msg);
-}
 
 /** React to external Emegencystop
  * (old setup -> probably not applicable anymore) **/
@@ -821,7 +821,17 @@ bool VRPuppets_demo::StateTransmissionCallback(std_srvs::SetBool::Request &req, 
     if (req.data == 1) {
         ROS_INFO("State transition service called.");
         // Do stuff
+        bool ok;
+        int pull_displacement = 200;
 
+        for (auto m:ip_address){
+            char str[100];
+            sprintf(str, "%d", (single_motor_setpoints[m.first]->text().toInt(&ok) + pull_displacement));
+            ROS_INFO("current setpoint: %d", single_motor_setpoints[m.first]->text().toInt(&ok));
+            single_motor_setpoints[m.first]->setText(str);
+            ROS_INFO("New setpoint: %s", str);
+        }
+        moveSlider();
         res.success = true;
         res.message = "State transition service called";
     } else {

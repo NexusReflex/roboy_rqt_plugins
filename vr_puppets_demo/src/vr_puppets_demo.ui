@@ -80,11 +80,17 @@
      <height>111</height>
     </rect>
    </property>
+   <property name="minimum">
+    <number>-10000</number>
+   </property>
    <property name="maximum">
     <number>10000</number>
    </property>
    <property name="pageStep">
     <number>100</number>
+   </property>
+   <property name="sliderPosition">
+    <number>0</number>
    </property>
    <property name="orientation">
     <enum>Qt::Vertical</enum>
@@ -687,11 +693,17 @@
      <height>111</height>
     </rect>
    </property>
+   <property name="minimum">
+    <number>-10000</number>
+   </property>
    <property name="maximum">
     <number>10000</number>
    </property>
    <property name="pageStep">
     <number>100</number>
+   </property>
+   <property name="sliderPosition">
+    <number>0</number>
    </property>
    <property name="orientation">
     <enum>Qt::Vertical</enum>
@@ -1745,11 +1757,17 @@
      <height>111</height>
     </rect>
    </property>
+   <property name="minimum">
+    <number>-10000</number>
+   </property>
    <property name="maximum">
     <number>10000</number>
    </property>
    <property name="pageStep">
     <number>100</number>
+   </property>
+   <property name="sliderPosition">
+    <number>0</number>
    </property>
    <property name="orientation">
     <enum>Qt::Vertical</enum>
@@ -1801,11 +1819,17 @@
      <height>111</height>
     </rect>
    </property>
+   <property name="minimum">
+    <number>-10000</number>
+   </property>
    <property name="maximum">
     <number>10000</number>
    </property>
    <property name="pageStep">
     <number>100</number>
+   </property>
+   <property name="sliderPosition">
+    <number>0</number>
    </property>
    <property name="orientation">
     <enum>Qt::Vertical</enum>
@@ -1820,11 +1844,17 @@
      <height>111</height>
     </rect>
    </property>
+   <property name="minimum">
+    <number>-10000</number>
+   </property>
    <property name="maximum">
     <number>10000</number>
    </property>
    <property name="pageStep">
     <number>100</number>
+   </property>
+   <property name="sliderPosition">
+    <number>0</number>
    </property>
    <property name="orientation">
     <enum>Qt::Vertical</enum>
@@ -2280,6 +2310,11 @@
      </disabled>
     </palette>
    </property>
+   <property name="font">
+    <font>
+     <kerning>false</kerning>
+    </font>
+   </property>
    <property name="frameShape">
     <enum>QFrame::StyledPanel</enum>
    </property>
@@ -2421,11 +2456,17 @@
      <height>111</height>
     </rect>
    </property>
+   <property name="minimum">
+    <number>-10000</number>
+   </property>
    <property name="maximum">
     <number>10000</number>
    </property>
    <property name="pageStep">
     <number>100</number>
+   </property>
+   <property name="sliderPosition">
+    <number>0</number>
    </property>
    <property name="orientation">
     <enum>Qt::Vertical</enum>
@@ -2449,7 +2490,7 @@
     <rect>
      <x>850</x>
      <y>460</y>
-     <width>151</width>
+     <width>191</width>
      <height>31</height>
     </rect>
    </property>
@@ -2461,7 +2502,7 @@
     </font>
    </property>
    <property name="text">
-    <string>DO NOT USE!</string>
+    <string>Handle with care!</string>
    </property>
   </widget>
   <widget class="QLabel" name="label_19">
@@ -3899,7 +3940,7 @@
     <rect>
      <x>850</x>
      <y>50</y>
-     <width>511</width>
+     <width>521</width>
      <height>371</height>
     </rect>
    </property>

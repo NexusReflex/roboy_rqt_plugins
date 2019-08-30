@@ -30,21 +30,21 @@ class VRPuppets_demo
 Q_OBJECT
 public:
     VRPuppets_demo();
-    ~VRPuppets_demo(){
+    ~VRPuppets_demo() override{
         system("rosnode kill serial_node");
         if(udp_thread->joinable())
             udp_thread->join();
     }
 
-    virtual void initPlugin(qt_gui_cpp::PluginContext &context);
+    void initPlugin(qt_gui_cpp::PluginContext &context) override;
 
-    virtual void shutdownPlugin();
+    void shutdownPlugin() override;
 
-    virtual void saveSettings(qt_gui_cpp::Settings &plugin_settings,
-                              qt_gui_cpp::Settings &instance_settings) const;
+    void saveSettings(qt_gui_cpp::Settings &plugin_settings,
+                              qt_gui_cpp::Settings &instance_settings) const override;
 
-    virtual void restoreSettings(const qt_gui_cpp::Settings &plugin_settings,
-                                 const qt_gui_cpp::Settings &instance_settings);
+    void restoreSettings(const qt_gui_cpp::Settings &plugin_settings,
+                                 const qt_gui_cpp::Settings &instance_settings) override;
 
 
 public Q_SLOTS:
