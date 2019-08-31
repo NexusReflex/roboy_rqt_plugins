@@ -3,6 +3,8 @@
 #ifndef Q_MOC_RUN
 
 #include <ros/ros.h>
+#include <thread>
+#include <chrono>
 #include <rqt_gui_cpp/plugin.h>
 #include <vr_puppets_demo/ui_vr_puppets_demo.h>
 #include <roboy_middleware_msgs/MotorStatus.h>
@@ -88,6 +90,7 @@ private:
     map<int,QRadioButton*> active,pos,vel,dis;
     map<int,int> Kp,Ki,Kd;
     map<int,int> control_mode;
+    map<int, double> status_pos;
     map<int, int> control_mode_temp;
     bool saved_temp_control_mode = false;
     int samples_per_plot = 200;

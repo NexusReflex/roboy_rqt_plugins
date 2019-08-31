@@ -153,7 +153,6 @@ void VRPuppets_demo::receiveStatusUDP() {
                                      (uint8_t) udp->buf[17] << 8 | (uint8_t) udp->buf[16]);
 
             int motor = udp->buf[0];
-            init_set[motor]=false;
             char str_pos[100];
             auto it = ip_address.find(motor);
             if (it == ip_address.end()) { ;
@@ -163,6 +162,7 @@ void VRPuppets_demo::receiveStatusUDP() {
                 ip_address[motor] = IP;
                 Q_EMIT new_motor();
                 ROS_INFO("A total of %i motors connected.", ip_address.size());
+                init_set[motor]=false;
                 sprintf(str_pos, "%d", pos);
                 ROS_INFO_THROTTLE(1,"Added motor %d, with init pos=%d",motor,pos);
                 if (!init_set[motor]){
@@ -569,6 +569,8 @@ void VRPuppets_demo::allToVelocity() {
     sendCommand();
 }
 
+
+
 /** Set all M3s to displacement Mode with same setpoint given in ui.setpoint_dis **/
 void VRPuppets_demo::allToDisplacement() {
     bool ok;
@@ -613,6 +615,7 @@ void VRPuppets_demo::sliderMoved() {
                 return;
             }
             set_points[m.first] = (sliders[m.first]->value() - 50) * motor_scale;
+
             sprintf(str, "%d", set_points[m.first]);
             single_motor_setpoints[m.first]->setText(str);
         }
@@ -844,7 +847,7 @@ bool VRPuppets_demo::StateTransmissionCallback(std_srvs::SetBool::Request &req, 
         // Do stuff
         bool ok;
         int pull_displacement = ui.state_transmission_displacement->text().toInt(&ok);
-
+        bool done_with_displacement=false;
         for (auto m:ip_address){
             if (int(m.first<=2)){
                 char str[100];
@@ -857,6 +860,20 @@ bool VRPuppets_demo::StateTransmissionCallback(std_srvs::SetBool::Request &req, 
                 sendCommand();
             }
         }
+        std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+        for (auto m:ip_address){
+            if (int(m.first<=2)){
+                char str[100];
+                sprintf(str, "%d", (single_motor_setpoints[m.first]->text().toInt(&ok) - pull_displacement));
+                ROS_INFO("current setpoint: %d", single_motor_setpoints[m.first]->text().toInt(&ok));
+                set_points[m.first] =  single_motor_setpoints[m.first]->text().toInt(&ok) - pull_displacement;
+                single_motor_setpoints[m.first]->setText(str);
+                ROS_INFO("New setpoint: %s", str);
+                controlModeChangedSingleMotor(m.first, m.second);
+                sendCommand();
+            }
+        }
+
         res.success = true;
         res.message = "State transition service called";
     } else {
