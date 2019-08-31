@@ -522,14 +522,14 @@ void VRPuppets_demo::setPositionModeForAll(){
     int motor_scale = ui.scale->text().toInt(&ok);
     for (auto m:ip_address) {
         control_mode[m.first] = POSITION;
+        set_points[m.first] = (single_motor_setpoints[m.first]->text().toInt());
+        sliders[m.first]->setValue((single_motor_setpoints[m.first]->text().toInt() / motor_scale) + 50); // +50
         pos[m.first]->setChecked(true);
         vel[m.first]->setChecked(false);
         dis[m.first]->setChecked(false);
-        set_points[m.first] = (single_motor_setpoints[m.first]->text().toInt());
-        sliders[m.first]->setValue((single_motor_setpoints[m.first]->text().toInt() / motor_scale) + 50); // +50
         controlModeChangedSingleMotor(m.first, m.second);
     }
-    ui.setpoint->setText(ui.setpoint_pos->text());
+    //ui.setpoint->setText(ui.setpoint_pos->text());
 }
 /** Set all M3s to Position Mode with same setpoint given in ui.setpoint_pos **/
 void VRPuppets_demo::allToPosition() {
@@ -846,17 +846,17 @@ bool VRPuppets_demo::StateTransmissionCallback(std_srvs::SetBool::Request &req, 
         int pull_displacement = ui.state_transmission_displacement->text().toInt(&ok);
 
         for (auto m:ip_address){
-            setPositionModeForAll();
-            ROS_INFO("m.first is %d", m.first);
-            if (int(m.first) <= 2){
+            if (int(m.first<=2)){
                 char str[100];
                 sprintf(str, "%d", (single_motor_setpoints[m.first]->text().toInt(&ok) + pull_displacement));
                 ROS_INFO("current setpoint: %d", single_motor_setpoints[m.first]->text().toInt(&ok));
+                set_points[m.first] =  single_motor_setpoints[m.first]->text().toInt(&ok) + pull_displacement;
                 single_motor_setpoints[m.first]->setText(str);
                 ROS_INFO("New setpoint: %s", str);
+                controlModeChangedSingleMotor(m.first, m.second);
+                sendCommand();
             }
         }
-        moveSlider();
         res.success = true;
         res.message = "State transition service called";
     } else {
