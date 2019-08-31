@@ -244,7 +244,6 @@ void VRPuppets_demo::updateMotorCommands() {
         p->setFixedSize(50, 30);
         p->setCheckable(true);
         p->setObjectName("pos");
-        p->setChecked(true);
         pos[m.first] = p;
         QObject::connect(p, SIGNAL(clicked()), this, SLOT(controlModeChanged()));
 
@@ -264,6 +263,7 @@ void VRPuppets_demo::updateMotorCommands() {
         d->setFixedSize(50, 30);
         d->setCheckable(true);
         d->setObjectName("dis");
+        d->setChecked(true);
         control_mode[m.first] = DISPLACEMENT;
         widget->layout()->addWidget(d);
         dis[m.first] = d;
@@ -371,8 +371,7 @@ void VRPuppets_demo::sendCommand() {
         udp_command->numbytes = 10;
         udp_command->client_addr.sin_addr.s_addr = inet_addr(m.second.c_str());
         udp_command->sendUDPToClient();
-//        ROS_INFO("Setpoint Motor %d after sendCommand is %d", motorcount, set_points[m.first]);
-        motorcount += 1;
+        ROS_INFO("Setpoint Motor %d after sendCommand is %d", motorcount, set_points[m.first]);
     }
 
 }
@@ -445,6 +444,7 @@ void VRPuppets_demo::controlModeChangedSingleMotor(const int &motor_nr, string &
 
 /** Change controlmode on radioButton->checked() event **/
 void VRPuppets_demo::controlModeChanged() {
+    lock_guard<mutex> lock(mux);
     udp_command->client_addr.sin_port = htons(8001);
     udp_command->numbytes = 20;
     int Kp, Ki, Kd;
@@ -485,6 +485,7 @@ void VRPuppets_demo::controlModeChanged() {
                 return;
             }
         } else if (dis[m.first]->isChecked()) {
+            ROS_INFO("Setting all to dis");
             Kp = ui.Kp_dis->text().toInt(&ok);
             if (!ok) {
                 ROS_ERROR("invalid conversion to integer of Kp");
@@ -529,7 +530,6 @@ void VRPuppets_demo::setPositionModeForAll(){
         controlModeChangedSingleMotor(m.first, m.second);
     }
     ui.setpoint->setText(ui.setpoint_pos->text());
-//    sendCommand();
 }
 /** Set all M3s to Position Mode with same setpoint given in ui.setpoint_pos **/
 void VRPuppets_demo::allToPosition() {
@@ -578,9 +578,9 @@ void VRPuppets_demo::allToDisplacement() {
         vel[m.first]->setChecked(false);
         dis[m.first]->setChecked(true);
         set_points[m.first] = ui.setpoint_dis->text().toInt(&ok);
-        controlModeChangedSingleMotor(m.first, m.second);
     }
     ui.setpoint->setText(ui.setpoint_dis->text());
+    controlModeChanged();
     sendCommand();
 }
 
@@ -710,7 +710,8 @@ void VRPuppets_demo::stop() {
                         ui.Ki_dis->setText(str);
                         sprintf(str, "%d", Kd[m.first]);
                         ui.Kd_dis->setText(str);
-                        controlModeChangedSingleMotor(m.first, m.second);
+                        controlModeChanged();
+                        sendCommand();
                         break;
                 }
             }
@@ -776,7 +777,7 @@ void VRPuppets_demo::stop() {
                     ui.Ki_dis->setText("0");
                     ui.Kd_dis->setText("0");
                     control_mode_temp[m.first] = 2;
-                    controlModeChangedSingleMotor(m.first, m.second);
+                    controlModeChanged();
                     break;
             }
         }
@@ -786,9 +787,9 @@ void VRPuppets_demo::stop() {
         ui.dis_frame->setEnabled(false);
         ui.motor_command->setEnabled(false);
         ui.setpoint_all->setEnabled(false);
-        ui.all_to_position->setEnabled(false);
-        ui.all_to_velocity->setEnabled(false);
-        ui.all_to_displacement->setEnabled(false);
+//        ui.all_to_position->setEnabled(false);
+//        ui.all_to_velocity->setEnabled(false);
+//        ui.all_to_displacement->setEnabled(false);
         ui.stop->setText("CONTINUE");
     }
 }
@@ -836,6 +837,7 @@ bool VRPuppets_demo::EmergencyCallback(std_srvs::SetBool::Request &req, std_srvs
  * @param res
  * @return
  */
+
 bool VRPuppets_demo::StateTransmissionCallback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res) {
     if (req.data == 1) {
         ROS_INFO("State transition service called.");
@@ -844,11 +846,15 @@ bool VRPuppets_demo::StateTransmissionCallback(std_srvs::SetBool::Request &req, 
         int pull_displacement = ui.state_transmission_displacement->text().toInt(&ok);
 
         for (auto m:ip_address){
-            char str[100];
-            sprintf(str, "%d", (single_motor_setpoints[m.first]->text().toInt(&ok) + pull_displacement));
-            ROS_INFO("current setpoint: %d", single_motor_setpoints[m.first]->text().toInt(&ok));
-            single_motor_setpoints[m.first]->setText(str);
-            ROS_INFO("New setpoint: %s", str);
+            setPositionModeForAll();
+            ROS_INFO("m.first is %d", m.first);
+            if (int(m.first) <= 2){
+                char str[100];
+                sprintf(str, "%d", (single_motor_setpoints[m.first]->text().toInt(&ok) + pull_displacement));
+                ROS_INFO("current setpoint: %d", single_motor_setpoints[m.first]->text().toInt(&ok));
+                single_motor_setpoints[m.first]->setText(str);
+                ROS_INFO("New setpoint: %s", str);
+            }
         }
         moveSlider();
         res.success = true;

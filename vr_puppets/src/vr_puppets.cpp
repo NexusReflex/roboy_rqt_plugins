@@ -338,7 +338,6 @@ void VRPuppets::rescale() {
 }
 
 void VRPuppets::sendCommand() {
-
     udp_command->client_addr.sin_port = htons(8001);
     udp_command->numbytes = 10;
     for (auto m:ip_address) {
@@ -353,12 +352,12 @@ void VRPuppets::sendCommand() {
 }
 
 void VRPuppets::controlModeChanged() {
+    lock_guard<mutex> lock(mux);
     udp_command->client_addr.sin_port = htons(8001);
     udp_command->numbytes = 20;
     int Kp, Ki, Kd;
     for (auto m:ip_address) {
         bool ok;
-        int mode = 0;
         if (pos[m.first]->isChecked()) {
             Kp = ui.Kp_pos->text().toInt(&ok);
             if (!ok) {
