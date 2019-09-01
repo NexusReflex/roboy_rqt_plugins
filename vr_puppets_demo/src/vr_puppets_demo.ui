@@ -1761,7 +1761,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>all to displacement</string>
+    <string>all to same displacement</string>
    </property>
   </widget>
   <widget class="QFrame" name="vel_frame">
@@ -4569,6 +4569,19 @@
  Displacement</string>
    </property>
   </widget>
+  <widget class="QPushButton" name="all_to_displacement_mode">
+   <property name="geometry">
+    <rect>
+     <x>1120</x>
+     <y>740</y>
+     <width>241</width>
+     <height>61</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>all to displacement Mode</string>
+   </property>
+  </widget>
   <zorder>m3_background</zorder>
   <zorder>vel_frame</zorder>
   <zorder>m3_background_3</zorder>
@@ -4592,6 +4605,7 @@
   <zorder>label_20</zorder>
   <zorder>state_transmission_displacement</zorder>
   <zorder>label_34</zorder>
+  <zorder>all_to_displacement_mode</zorder>
  </widget>
  <customwidgets>
   <customwidget>

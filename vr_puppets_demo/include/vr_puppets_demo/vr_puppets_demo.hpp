@@ -58,6 +58,7 @@ public Q_SLOTS:
     void allToVelocity();
     void allToDisplacement();
     void sliderMoved();
+    void setDisplacementModeForAll();
     void sliderMovedAll();
     void stop();
     void sendMotorCommandLinearActuators();
@@ -102,6 +103,7 @@ private:
     ros::ServiceClient zero_srv;
     ros::ServiceServer e_stop_server;
     ros::ServiceServer state_transmission_server;
+    ros::ServiceServer obstacle_reached_server;
     ros::Time start_time;
     boost::shared_ptr<ros::AsyncSpinner> spinner;
     UDPSocketPtr udp, udp_command;
@@ -112,4 +114,5 @@ private:
 
     bool EmergencyCallback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res);
     bool StateTransmissionCallback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res);
+    bool ObstacleReachedCallback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res);
 };
