@@ -1605,7 +1605,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>0</string>
+     <string>1000</string>
     </property>
    </widget>
   </widget>
@@ -4552,7 +4552,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>1</string>
+    <string>1000</string>
    </property>
   </widget>
   <widget class="QLabel" name="label_34">
