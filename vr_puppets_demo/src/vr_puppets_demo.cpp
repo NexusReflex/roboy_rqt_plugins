@@ -134,7 +134,6 @@ void VRPuppets_demo::sendMotorCommandLinearActuators() {
 void VRPuppets_demo::receiveStatusUDP() {
     ROS_INFO("start receiving udp");
     ros::Time t0 = ros::Time::now(), t1;
-    bool first_motor_appearance = true;
     while (ros::ok()) {
         int bytes_received = udp->receiveUDPFromClient();
         if (bytes_received == 20) {
@@ -268,6 +267,7 @@ void VRPuppets_demo::updateMotorCommands() {
         d->setCheckable(true);
         d->setObjectName("dis");
         d->setChecked(true);
+        // set motors to displacement mode by default
         control_mode[m.first] = DISPLACEMENT;
         widget->layout()->addWidget(d);
         dis[m.first] = d;
@@ -296,6 +296,7 @@ void VRPuppets_demo::updateMotorCommands() {
 
         motor_command_scrollarea->layout()->addWidget(widget);
         widgets.push_back(widget);
+
     }
 }
 
@@ -908,7 +909,8 @@ bool VRPuppets_demo::StateTransmissionCallback(std_srvs::SetBool::Request &req, 
                 sendCommand();
             }
         }
-
+        ui.setpoint_dis->setText("1000");
+        allToDisplacement();
         res.success = true;
         res.message = "State transition service called";
     } else {
