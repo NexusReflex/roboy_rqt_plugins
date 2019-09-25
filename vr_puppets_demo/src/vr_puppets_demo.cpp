@@ -28,6 +28,7 @@ void VRPuppets_demo::initPlugin(qt_gui_cpp::PluginContext &context) {
         ros::init(argc, argv, "motor_status_rqt_plugin");
     }
 
+    // advertise ROS publishers, service servers and clients
     motor_command = nh->advertise<roboy_middleware_msgs::MotorCommand>("/stepper_motor_shield/MotorCommand", 1);
     zero_srv = nh->serviceClient<std_srvs::Empty>("/stepper_motor_shield/zero");
     e_stop_server = nh->advertiseService("/m3/emergency_stop", &VRPuppets_demo::EmergencyCallback, this);
@@ -36,10 +37,11 @@ void VRPuppets_demo::initPlugin(qt_gui_cpp::PluginContext &context) {
     obstacle_reached_server = nh->advertiseService("/vr_puppets/obstacle_reached",
                                                    &VRPuppets_demo::ObstacleReachedCallback, this);
 
+    // connect QT slots and signals
     QObject::connect(this, SIGNAL(new_data()), this, SLOT(plotData()));
     QObject::connect(this, SIGNAL(new_motor()), this, SLOT(newMotor()));
-    QObject::connect(ui.all_to_position, SIGNAL(clicked()), this, SLOT(allToPosition()));
-    QObject::connect(ui.all_to_velocity, SIGNAL(clicked()), this, SLOT(allToVelocity()));
+    QObject::connect(ui.all_to_position, SIGNAL(clicked()), this, SLOT(allToPositionSetpoint()));
+    QObject::connect(ui.all_to_velocity, SIGNAL(clicked()), this, SLOT(allToVelocitySetpoint()));
     QObject::connect(ui.all_to_displacement, SIGNAL(clicked()), this, SLOT(allToDisplacement()));
     QObject::connect(ui.all_to_displacement_mode, SIGNAL(clicked()), this, SLOT(setDisplacementModeForAll()));
     QObject::connect(ui.all_to_position_mode, SIGNAL(clicked()), this, SLOT(setPositionModeForAll()));
@@ -55,11 +57,13 @@ void VRPuppets_demo::initPlugin(qt_gui_cpp::PluginContext &context) {
     ui.stop->setStyleSheet("background-color: red");
     QObject::connect(ui.setpoint_all, SIGNAL(valueChanged(int)), this, SLOT(sliderMovedAll()));
 
+    // ROS spinner
     spinner.reset(new ros::AsyncSpinner(2));
     spinner->start();
 
     start_time = ros::Time::now();
 
+    // initialize motor command scroll area
     QScrollArea *scrollArea = widget_->findChild<QScrollArea *>("motor_command");
     scrollArea->setBackgroundRole(QPalette::Window);
     scrollArea->setFrameShadow(QFrame::Plain);
@@ -74,12 +78,13 @@ void VRPuppets_demo::initPlugin(qt_gui_cpp::PluginContext &context) {
     scrollArea->setWidget(motor_command_scrollarea);
 
     uint32_t ip;
-    inet_pton(AF_INET, "10.42.0.1", &ip); //todo: insert HOST_IP -> roboy wifi: 192.168.255.255
+    inet_pton(AF_INET, "192.168.255.255", &ip); // HOST IP used for ESP32 communication
     udp.reset(new UDPSocket(8000));
     udp_command.reset(new UDPSocket(8001));
     udp_thread.reset(new std::thread(&VRPuppets_demo::receiveStatusUDP, this));
     udp_thread->detach();
 
+    // position plot
     for (uint motor = 0; motor < 20; motor++) {
         ui.position_plot->addGraph();
         ui.position_plot->graph(motor)->setPen(
@@ -111,12 +116,12 @@ void VRPuppets_demo::restoreSettings(const qt_gui_cpp::Settings &plugin_settings
     // v = instance_settings.value(k)
 }
 
-/** Start ROSSerial Node for the Linear Actuators **/
+/** @brief Starts ROSSerial Node to communicate with the linear actuators. **/
 void VRPuppets_demo::serialNode() {
     system("rosrun rosserial_arduino serial_node.py _port:=/dev/ttyACM0&");
 }
 
-/** Read out and send Commands to Lin. Actuators **/
+/** @brief Sends Commands to linear actuators **/
 void VRPuppets_demo::sendMotorCommandLinearActuators() {
     roboy_middleware_msgs::MotorCommand msg;
     msg.id = 69;
@@ -130,7 +135,7 @@ void VRPuppets_demo::sendMotorCommandLinearActuators() {
     motor_command.publish(msg);
 }
 
-/** Receive current motor pos, vel, dis, pwm **/
+/** @brief Receives current motor pos, vel, dis, pwm from M3s.**/
 void VRPuppets_demo::receiveStatusUDP() {
     ROS_INFO("start receiving udp");
     ros::Time t0 = ros::Time::now(), t1;
@@ -174,7 +179,6 @@ void VRPuppets_demo::receiveStatusUDP() {
                 }
                 break;
             }
-
             motor_position[motor].push_back(pos);
             motor_velocity[motor].push_back(vel);
             motor_displacement[motor].push_back(dis);
@@ -209,7 +213,7 @@ void VRPuppets_demo::receiveStatusUDP() {
     ROS_INFO("stop receiving udp");
 }
 
-/** Updade motor command widget in Gui when new motors are available **/
+/** @brief Updades motor command widget in VRPuppets gui when new motors are available. **/
 void VRPuppets_demo::updateMotorCommands() {
     for (auto w:widgets) {
         motor_command_scrollarea->layout()->removeWidget(w);
@@ -248,7 +252,7 @@ void VRPuppets_demo::updateMotorCommands() {
         p->setCheckable(true);
         p->setObjectName("pos");
         pos[m.first] = p;
-        QObject::connect(p, SIGNAL(clicked()), this, SLOT(controlModeChanged()));
+        QObject::connect(p, SIGNAL(clicked()), this, SLOT(radioButton_CB()));
 
         widget->layout()->addWidget(p);
 
@@ -259,7 +263,7 @@ void VRPuppets_demo::updateMotorCommands() {
         v->setObjectName("vel");
         widget->layout()->addWidget(v);
         vel[m.first] = v;
-        QObject::connect(v, SIGNAL(clicked()), this, SLOT(controlModeChanged()));
+        QObject::connect(v, SIGNAL(clicked()), this, SLOT(radioButton_CB()));
 
         QRadioButton *d = new QRadioButton(widget);
         d->setText("dis");
@@ -267,11 +271,12 @@ void VRPuppets_demo::updateMotorCommands() {
         d->setCheckable(true);
         d->setObjectName("dis");
         d->setChecked(true);
+
         // set motors to displacement mode by default
         control_mode[m.first] = DISPLACEMENT;
         widget->layout()->addWidget(d);
         dis[m.first] = d;
-        QObject::connect(d, SIGNAL(clicked()), this, SLOT(controlModeChanged()));
+        QObject::connect(d, SIGNAL(clicked()), this, SLOT(radioButton_CB()));
 
         QSlider *slider = new QSlider(Qt::Orientation::Horizontal, widget);
         slider->setFixedSize(100, 30);
@@ -280,7 +285,7 @@ void VRPuppets_demo::updateMotorCommands() {
         sliders[m.first] = slider;
         QObject::connect(slider, SIGNAL(valueChanged(int)), this, SLOT(sliderMoved()));
 
-        bool ok;
+        // change single motor setpoints on demand
         QLineEdit *motor_setpoint = new QLineEdit(widget);
         sprintf(str, "%d", init_setpoints[m.first]);
         motor_setpoint->setText(str);
@@ -288,11 +293,6 @@ void VRPuppets_demo::updateMotorCommands() {
         widget->layout()->addWidget(motor_setpoint);
         single_motor_setpoints[m.first] = motor_setpoint;
         QObject::connect(motor_setpoint, SIGNAL(returnPressed()), this, SLOT(moveSlider()));
-
-
-        // Disable untested control modes
-        vel[m.first]->setDisabled(false);
-        dis[m.first]->setDisabled(false);
 
         motor_command_scrollarea->layout()->addWidget(widget);
         widgets.push_back(widget);
@@ -364,7 +364,7 @@ void VRPuppets_demo::rescale() {
     }
 }
 
-/** Send Motor setpoints to M3 Units **/
+/**@brief Sends setpoints to M3 Units.**/
 void VRPuppets_demo::sendCommand() {
 
     udp_command->client_addr.sin_port = htons(8001);
@@ -381,7 +381,7 @@ void VRPuppets_demo::sendCommand() {
 
 }
 
-/** Only position mode K-value changes **/
+/** @brief Changes the controlmode for the M3 unit specified by IP. **/
 void VRPuppets_demo::controlModeChangedSingleMotor(const int &motor_nr, string &ip) {
     udp_command->client_addr.sin_port = htons(8001);
     udp_command->numbytes = 20;
@@ -444,84 +444,17 @@ void VRPuppets_demo::controlModeChangedSingleMotor(const int &motor_nr, string &
     mempcpy(&udp_command->buf[16], &motor_nr, 4);
     udp_command->client_addr.sin_addr.s_addr = inet_addr(ip.c_str());
     udp_command->sendUDPToClient();
-    ROS_INFO("SEND controlModeChanged to motor %d", motor_nr);
+    ROS_INFO("SEND radioButton_CB to motor %d", motor_nr);
 }
 
-/** Change controlmode on radioButton->checked() event **/
-void VRPuppets_demo::controlModeChanged() {
-    lock_guard<mutex> lock(mux);
-    udp_command->client_addr.sin_port = htons(8001);
-    udp_command->numbytes = 20;
-    int Kp, Ki, Kd;
-    int motor = 0;
+/**@brief Change control mode on radioButton->checked() event **/
+void VRPuppets_demo::radioButton_CB() {
     for (auto m:ip_address) {
-        bool ok;
-        if (pos[m.first]->isChecked()) {
-            Kp = ui.Kp_pos->text().toInt(&ok);
-            ROS_INFO("ControlModeChanged: ui.KP used for motor %d is %d", motor, Kp);
-            if (!ok) {
-                ROS_ERROR("invalid conversion to integer of Kp");
-                return;
-            }
-            Ki = ui.Ki_pos->text().toInt(&ok);
-            if (!ok) {
-                ROS_ERROR("invalid conversion to integer of Ki");
-                return;
-            }
-            Kd = ui.Kd_pos->text().toInt(&ok);
-            if (!ok) {
-                ROS_ERROR("invalid conversion to integer of Kd");
-                return;
-            }
-        } else if (vel[m.first]->isChecked()) {
-            Kp = ui.Kp_vel->text().toInt(&ok);
-            if (!ok) {
-                ROS_ERROR("invalid conversion to integer of Kp");
-                return;
-            }
-            Ki = ui.Ki_vel->text().toInt(&ok);
-            if (!ok) {
-                ROS_ERROR("invalid conversion to integer of Ki");
-                return;
-            }
-            Kd = ui.Kd_vel->text().toInt(&ok);
-            if (!ok) {
-                ROS_ERROR("invalid conversion to integer of Kd");
-                return;
-            }
-        } else if (dis[m.first]->isChecked()) {
-            ROS_INFO("Setting all to dis");
-            Kp = ui.Kp_dis->text().toInt(&ok);
-            if (!ok) {
-                ROS_ERROR("invalid conversion to integer of Kp");
-                return;
-            }
-            Ki = ui.Ki_dis->text().toInt(&ok);
-            if (!ok) {
-                ROS_ERROR("invalid conversion to integer of Ki");
-                return;
-            }
-            Kd = ui.Kd_dis->text().toInt(&ok);
-            if (!ok) {
-                ROS_ERROR("invalid conversion to integer of Kd");
-                return;
-            }
-        } else {
-            ROS_ERROR("haeeee????");
-            return;
-        }
-        motor += 1;
-        mempcpy(&udp_command->buf[0], &Kd, 4);
-        mempcpy(&udp_command->buf[4], &Ki, 4);
-        mempcpy(&udp_command->buf[8], &Kp, 4);
-        mempcpy(&udp_command->buf[12], &control_mode[m.first], 4);
-        mempcpy(&udp_command->buf[16], &m.first, 4);
-        udp_command->client_addr.sin_addr.s_addr = inet_addr(m.second.c_str());
-        udp_command->sendUDPToClient();
+        controlModeChangedSingleMotor(m.first, m.second);
     }
 }
 
-///** Set all M3s to Position Mode with their indipendent setpoints -> for init **/
+///** Set all M3s to Position Mode with their indipendent setpoints. **/
 void VRPuppets_demo::setPositionModeForAll() {
     bool ok;
     int motor_scale = ui.scale->text().toInt(&ok);
@@ -537,7 +470,7 @@ void VRPuppets_demo::setPositionModeForAll() {
         controlModeChangedSingleMotor(m.first, m.second);
     }
 }
-
+///** Set all M3s to displacement mode with their indipendent setpoints. **/
 void VRPuppets_demo::setDisplacementModeForAll() {
     bool ok;
     int motor_scale = ui.scale->text().toInt(&ok);
@@ -553,8 +486,8 @@ void VRPuppets_demo::setDisplacementModeForAll() {
     }
 }
 
-/** Set all M3s to Position Mode with same setpoint given in ui.setpoint_pos **/
-void VRPuppets_demo::allToPosition() {
+/** @brief Sets all M3s to Position Mode with the same setpoint given by ui.setpoint_pos. **/
+void VRPuppets_demo::allToPositionSetpoint() {
     bool ok;
     char str[100];
     int motor_scale = ui.scale->text().toInt(&ok);
@@ -575,8 +508,8 @@ void VRPuppets_demo::allToPosition() {
     sendCommand();
 }
 
-/** Set all M3s to Velocity Mode with same setpoint given in ui.setpoint_vel **/
-void VRPuppets_demo::allToVelocity() {
+/** @brief Sets all M3s to Velocity Mode  with the same setpoint given by ui.setpoint_vel. **/
+void VRPuppets_demo::allToVelocitySetpoint() {
     bool ok;
     char str[100];
     int motor_scale = ui.scale->text().toInt(&ok);
@@ -599,7 +532,7 @@ void VRPuppets_demo::allToVelocity() {
 }
 
 
-/** Set all M3s to displacement Mode with same setpoint given in ui.setpoint_dis **/
+/** @brief Sets all M3s to displacement Mode with same setpoint given by ui.setpoint_dis. **/
 void VRPuppets_demo::allToDisplacement() {
     bool ok;
     char str[100];
@@ -621,7 +554,7 @@ void VRPuppets_demo::allToDisplacement() {
     sendCommand();
 }
 
-/** Adjust sliders on motor_setpoint returnPressed() event **/
+/** @brief Adjusts sliders on motor_setpoint returnPressed() event. **/
 void VRPuppets_demo::moveSlider() {
     bool ok;
     QLineEdit *tmp;
@@ -638,7 +571,7 @@ void VRPuppets_demo::moveSlider() {
     }
 }
 
-/** Update motor_setpoint and set_points when sliders are moved **/
+/** @brief Updates motor_setpoint and set_points when sliders are moved **/
 void VRPuppets_demo::sliderMoved() {
     bool ok;
     char str[100];
@@ -658,7 +591,7 @@ void VRPuppets_demo::sliderMoved() {
     sendCommand();
 }
 
-/** Move all M3s together according to main slider setpoint**/
+/** @brief Moves all M3 setpoints together according to main slider setpoint.**/
 void VRPuppets_demo::sliderMovedAll() {
     bool ok;
     int motor_scale = ui.scale->text().toInt(&ok);
@@ -679,9 +612,9 @@ void VRPuppets_demo::sliderMovedAll() {
     sendCommand();
 }
 
-/** Stop and restart M3s.
- * On "continue" by using the 'follow' checkboxeiter old setpoints can be resumed
- * and motors start moving right away, or motors stay at their stop point.
+/** @brief Stop and restart M3s.
+ * By checking the 'follow' checkbox, old setpoints can be resumed on "continue"
+ * and the motors start moving right away. Otherwise the motors stay at their stop point.
  */
 void VRPuppets_demo::stop() {
     if (!ui.stop->isChecked()) {
@@ -748,7 +681,7 @@ void VRPuppets_demo::stop() {
                         ui.Ki_dis->setText(str);
                         sprintf(str, "%d", Kd[m.first]);
                         ui.Kd_dis->setText(str);
-                        controlModeChanged();
+                        controlModeChangedSingleMotor(m.first, m.second);
                         sendCommand();
                         break;
                 }
@@ -843,9 +776,8 @@ void VRPuppets_demo::newMotor() {
     udp_thread->detach();
 }
 
-/* ROS related stuff (Pupblisher, Subscriber, Service servers...) */
-
-/** React to external Emegencystop
+/* ROS related stuff (Publishers, Subscribers, Service servers...) */
+/** React to external emegency stop
  * (old setup -> probably not applicable anymore) **/
 bool VRPuppets_demo::EmergencyCallback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res) {
     if (req.data == 1) {
@@ -864,15 +796,13 @@ bool VRPuppets_demo::EmergencyCallback(std_srvs::SetBool::Request &req, std_srvs
     return true;
 }
 
-/** Service callback for OUI-Team State transmission
+/** Service callback for OUI-Team State transmission.
  * Sets tendons of M3s 0, 1, 2 to Position Mode and pulls back the VR-operator by the relative
  * displacement given in the Gui textBox 'state_transmission_displacement',
  * sleeps 3 seconds and releases tendons to pre-pull position.
  * @param req (std_srvs::SetBool) - set 'true' to call service
  * @param res (std_srvs::SetBool) - sucess true/falls and msg
- * @return
  */
-
 bool VRPuppets_demo::StateTransmissionCallback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res) {
     if (req.data == 1) {
         ROS_INFO("State transition service called.");
@@ -921,6 +851,12 @@ bool VRPuppets_demo::StateTransmissionCallback(std_srvs::SetBool::Request &req, 
     return true;
 }
 
+/** Service callback for OUI-Team, whenever the operators hand reaches an obstacle.
+ * On 'true': Sets tendons of M3s 3, 4, 5 to position mode and blocks them in their current position.
+ * On 'false': Sets tendons of M3s 3, 4, 5 back to displacement mode and allows for free movement.
+ * @param req (std_srvs::SetBool) - set 'true' to change into position mode, 'false' to change to displacement mode
+ * @param res (std_srvs::SetBool) - sucess true/falls and message
+ */
 bool VRPuppets_demo::ObstacleReachedCallback(std_srvs::SetBool::Request &req, std_srvs::SetBool::Response &res) {
     if (req.data == 1) {
         ROS_INFO("obstacle reached service called.");

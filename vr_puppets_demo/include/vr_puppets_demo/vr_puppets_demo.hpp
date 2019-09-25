@@ -53,9 +53,9 @@ public Q_SLOTS:
     void plotData();
     void rescale();
     void sendCommand();
-    void controlModeChanged();
-    void allToPosition();
-    void allToVelocity();
+    void radioButton_CB();
+    void allToPositionSetpoint();
+    void allToVelocitySetpoint();
     void allToDisplacement();
     void sliderMoved();
     void setDisplacementModeForAll();
