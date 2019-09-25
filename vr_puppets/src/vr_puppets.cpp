@@ -78,7 +78,7 @@ void VRPuppets::initPlugin(qt_gui_cpp::PluginContext &context) {
     scrollArea->setWidget(motor_command_scrollarea);
 
     uint32_t ip;
-    inet_pton(AF_INET, "192.168.255.255", &ip); // HOST IP used for ESP32 communication
+    inet_pton(AF_INET, "192.168.255.255", &ip); // HOST IP used for ESP32 communication (Roboy WIFI)
     udp.reset(new UDPSocket(8000));
     udp_command.reset(new UDPSocket(8001));
     udp_thread.reset(new std::thread(&VRPuppets::receiveStatusUDP, this));
