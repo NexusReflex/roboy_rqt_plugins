@@ -1,13 +1,13 @@
 <library path="lib/libvr_puppets">
   <class name="VRPuppets" type="VRPuppets" base_class_type="rqt_gui_cpp::Plugin">
     <description>
-      VR puppets plugin
+      VR puppets demo plugin
     </description>
     <qtgui>
       <group>
         <label>Roboy</label>
       </group>
-      <label>vr puppets</label>
+      <label>vr puppets demo</label>
       <statustip>Great user interface to provide real value.</statustip>
     </qtgui>
   </class>

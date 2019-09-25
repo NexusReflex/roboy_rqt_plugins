@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project( vr_puppets)
+project(vr_puppets)
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O0 -g")
 
@@ -36,28 +36,29 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-add_library( vr_puppets src/vr_puppets.cpp ${vr_puppets_MOCS} ${vr_puppets_UIS_H}
-        qcustomplot/qcustomplot.cpp)
+add_library( ${PROJECT_NAME} src/vr_puppets.cpp ${vr_puppets_MOCS} ${vr_puppets_UIS_H}
+        qcustomplot/qcustomplot.cpp src/vr_puppets.cpp include/vr_puppets/vr_puppets.hpp)
 
-add_dependencies(vr_puppets roboy_middleware_msgs_gencpp)
+add_dependencies(${PROJECT_NAME} roboy_middleware_msgs_gencpp)
 
-target_link_libraries(vr_puppets ${catkin_LIBRARIES} )
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} )
 
 if("${qt_gui_cpp_USE_QT_MAJOR_VERSION} " STREQUAL "5 ")
-  target_link_libraries(vr_puppets Qt5::Widgets)
+  target_link_libraries(${PROJECT_NAME} Qt5::Widgets)
 else()
-  target_link_libraries(vr_puppets ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY})
+  target_link_libraries(${PROJECT_NAME} ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY})
 endif()
 
 #############
 ## Install ##
 #############
 
-install(TARGETS vr_puppets
+install(TARGETS ${PROJECT_NAME}
         LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
         )
 
 install(FILES
         package.xml
+        plugin.xml
         DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
         )

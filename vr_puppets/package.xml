@@ -3,7 +3,7 @@
   <name>vr_puppets</name>
   <version>0.0.0</version>
   <description>vr puppets plugin for rqt</description>
-  <maintainer email="simon.trendel@tum.de">Simon Trendel</maintainer>
+  <maintainer email="laura.bielenberg@tum.de">Laura Bielenberg</maintainer>
   <license>BSD-3</license>
   <buildtool_depend>catkin</buildtool_depend>
   <depend>roscpp</depend>
